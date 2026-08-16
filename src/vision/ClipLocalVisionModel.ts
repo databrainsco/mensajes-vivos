@@ -1,6 +1,6 @@
 import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, ObjectType, VisionResult } from '../types'
 import { VISION_MODEL } from './modelCatalog'
-import { pieceForClipLabel, pieceLabels } from './labels'
+import { allClipLabels, isRejectLabel, pieceForClipLabel } from './labels'
 
 type Classifier = {
   (
@@ -10,6 +10,11 @@ type Classifier = {
   ): Promise<Array<{ label: string; score: number }>>
   dispose?: () => Promise<void>
 }
+
+/** Umbrales altos: CLIP siempre ordena etiquetas; sin margen se inventa. */
+const MIN_SCORE = 0.72
+const MIN_MARGIN = 0.12
+const CONFIRM_SCORE = 0.82
 
 async function toModelInput(image: ImageBitmap | ImageData | HTMLCanvasElement): Promise<unknown> {
   const { RawImage } = await import('@huggingface/transformers')
@@ -23,6 +28,22 @@ async function toModelInput(image: ImageBitmap | ImageData | HTMLCanvasElement):
     return new RawImage(data.data, data.width, data.height, 4)
   }
   throw new Error('Formato de imagen no soportado para CLIP')
+}
+
+function unknownResult(score: number, reason: string): VisionResult {
+  return {
+    tipo_objeto: 'objeto_desconocido',
+    identificacion: { nombre: null, confianza: score, estado: 'descripcion_visual' },
+    cultura: null,
+    periodo: null,
+    elementos: [],
+    instrumentos: [],
+    alternativas: [],
+    advertencias: [reason, 'No se inventa una identidad sin evidencia suficiente.'],
+    descripcion_visible: 'No puedo identificar una pieza del paquete local. Apunta a Coatlicue, Océlotl Cuauhxicalli o la lámina de Xólotl.',
+    embedding: [score],
+    simulation: false,
+  }
 }
 
 export class ClipLocalVisionModel implements LocalVisionModel {
@@ -66,32 +87,29 @@ export class ClipLocalVisionModel implements LocalVisionModel {
     _context?: AnalyzeContext,
   ): Promise<VisionResult> {
     await this.loadModel()
-    const labels = pieceLabels()
+    const labels = allClipLabels()
     const input = await toModelInput(image)
     const ranked = await this.classifier!(input, labels, {
       hypothesis_template: 'a photo of {}',
     })
     const top = ranked[0]
-    const piece = top ? pieceForClipLabel(top.label) : null
+    const second = ranked[1]
     const score = top?.score ?? 0
+    const margin = score - (second?.score ?? 0)
 
-    if (!piece || score < 0.18) {
-      return {
-        tipo_objeto: 'objeto_desconocido',
-        identificacion: { nombre: null, confianza: score, estado: 'descripcion_visual' },
-        cultura: null,
-        periodo: null,
-        elementos: [],
-        instrumentos: [],
-        alternativas: ranked.slice(0, 3).map((r) => ({ nombre: r.label, confianza: r.score })),
-        advertencias: ['Modelo CLIP local. Sin coincidencia suficiente con las fichas.'],
-        descripcion_visible: 'Aún no hay una ficha local lo bastante cercana. Acerca la pieza y estabiliza el teléfono.',
-        embedding: [score],
-        simulation: false,
-      }
+    if (!top || isRejectLabel(top.label)) {
+      return unknownResult(score, 'La escena parece un libro, pantalla u objeto ajeno al paquete.')
     }
 
-    const estado = score >= 0.35 ? 'confirmada_por_paquete' : 'identificacion_probable'
+    const piece = pieceForClipLabel(top.label)
+    if (!piece || score < MIN_SCORE || margin < MIN_MARGIN) {
+      return unknownResult(
+        score,
+        `Confianza insuficiente (${Math.round(score * 100)}%, margen ${Math.round(margin * 100)}%).`,
+      )
+    }
+
+    const estado = score >= CONFIRM_SCORE && margin >= 0.18 ? 'confirmada_por_paquete' : 'identificacion_probable'
     return {
       tipo_objeto: piece.tipo_objeto as ObjectType,
       identificacion: { nombre: piece.nombre, confianza: score, estado },
@@ -99,8 +117,14 @@ export class ClipLocalVisionModel implements LocalVisionModel {
       periodo: null,
       elementos: piece.elementos,
       instrumentos: [],
-      alternativas: ranked.slice(1, 3).map((r) => ({ nombre: r.label, confianza: r.score })),
-      advertencias: ['Identidad tomada de la ficha local. CLIP ordena coincidencias visuales en el teléfono.'],
+      alternativas: ranked
+        .slice(1, 4)
+        .filter((r) => !isRejectLabel(r.label))
+        .map((r) => ({ nombre: pieceForClipLabel(r.label)?.nombre ?? r.label, confianza: r.score })),
+      advertencias:
+        estado === 'identificacion_probable'
+          ? ['Identificación probable, no confirmada. Revisa la ficha antes de tomarla como hecho.']
+          : ['Identidad tomada de la ficha local tras coincidencia alta con CLIP.'],
       descripcion_visible: `Escena compatible con ${piece.tipo_objeto}.`,
       indoor_cues: { sala: piece.sala, inventario: piece.inventario },
       embedding: [score],

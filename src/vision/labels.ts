@@ -1,22 +1,31 @@
 import { PIECES } from '../demo/packageData'
 
-/** Etiquetas en inglés: CLIP responde mejor así. El índice coincide con PIECES. */
+/** Etiquetas positivas: índice 0..n-1 = PIECES. */
 export const CLIP_LABELS = [
-  'Aztec stone sculpture of Coatlicue goddess with snakes and skull necklace',
-  'Aztec stone jaguar sculpture ritual vessel Cuauhxicalli ocelot',
-  'Mesoamerican painted codex page with Xolotl dog-headed deity',
+  'stone Aztec sculpture of Coatlicue goddess with snake skirt in a museum',
+  'stone Aztec jaguar sculpture Cuauhxicalli ocelot vessel in a museum',
+  'pre-Hispanic painted codex page with Xolotl dog-headed deity',
 ] as const
+
+/** Etiquetas de rechazo: si ganan, no hay identificación. */
+export const REJECT_LABELS = [
+  'a modern printed book cover',
+  'a laptop or phone screen',
+  'an unrelated everyday object',
+  'a person or selfie',
+  'blurry or empty scene',
+] as const
+
+export function allClipLabels() {
+  return [...CLIP_LABELS, ...REJECT_LABELS]
+}
 
 export function pieceForClipLabel(label: string) {
   const idx = CLIP_LABELS.findIndex((l) => l === label)
   if (idx >= 0) return PIECES[idx]
-  const lower = label.toLowerCase()
-  return (
-    PIECES.find((p) => lower.includes(p.nombre.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').slice(0, 6))) ??
-    null
-  )
+  return null
 }
 
-export function pieceLabels() {
-  return [...CLIP_LABELS]
+export function isRejectLabel(label: string) {
+  return (REJECT_LABELS as readonly string[]).includes(label)
 }

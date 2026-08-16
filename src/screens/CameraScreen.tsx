@@ -143,7 +143,7 @@ export function CameraScreen() {
           navigator.vibrate?.(30)
         }
       } else {
-        setStatus(usingClip ? 'Sin coincidencia · acerca la pieza' : 'Sin coincidencia · descarga CLIP en Guías')
+        setStatus('Sin identificación · no se inventa una pieza')
       }
     } catch (error) {
       setStatus(`Error al analizar: ${String(error).slice(0, 60)}`)
@@ -165,14 +165,23 @@ export function CameraScreen() {
   const label = live?.identificacion.nombre
   const hint =
     live?.identificacion.estado === 'confirmada_por_paquete'
-      ? 'Coincidencia con ficha local · toca para abrir'
+      ? 'Coincidencia alta con ficha local · toca para abrir'
       : live?.identificacion.estado === 'identificacion_probable'
-        ? 'Identificación probable · toca para abrir'
+        ? 'Solo probable · verifica antes de aceptar'
         : live
           ? live.descripcion_visible
           : modelReady
-            ? 'Apunta a Coatlicue, Océlotl o un códice'
-            : 'Sin CLIP: reconocimiento básico. Descárgalo en Guías.'
+            ? 'Solo se nombra una pieza con evidencia fuerte'
+            : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
+
+  const kicker =
+    scanning
+      ? 'Escaneando'
+      : live?.identificacion.nombre
+        ? live.identificacion.estado === 'confirmada_por_paquete'
+          ? 'Confirmado'
+          : 'Probable'
+        : 'Sin identificación'
 
   return (
     <div className="camera-root">
@@ -217,8 +226,10 @@ export function CameraScreen() {
             else if (!modelReady) nav('/modelo')
           }}
         >
-          <span className="kicker">{scanning ? 'Escaneando' : label ? 'Detectado' : 'En vivo'}</span>
-          <strong>{label ?? (modelReady ? 'Buscando coincidencia…' : 'Descarga el modelo CLIP')}</strong>
+          <span className="kicker">{kicker}</span>
+          <strong>
+            {label ?? (modelReady ? 'Pieza no identificada' : 'Descarga el modelo CLIP')}
+          </strong>
           <span className="tiny">{hint}</span>
           {live?.identificacion.confianza ? (
             <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza</span>
