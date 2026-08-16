@@ -156,13 +156,6 @@ export function CameraScreen() {
   return (
     <div className="camera-root">
       <video ref={video} autoPlay playsInline muted aria-label="Exploración en vivo" />
-      <div className={`scanner ${scanning ? 'active' : 'idle'}`} aria-hidden="true">
-        <span className="corner tl" />
-        <span className="corner tr" />
-        <span className="corner bl" />
-        <span className="corner br" />
-        <span className="laser" />
-      </div>
       <div className="hud live">
         <header className="hud-top">
           <div>
@@ -176,16 +169,23 @@ export function CameraScreen() {
             <Link className="icon-btn" to="/paquetes" aria-label="Guías">Guías</Link>
             <Link className="icon-btn" to="/privacidad" aria-label="Privacidad">Privacidad</Link>
           </div>
-        </header>
-        {zone && (
-          <div className="zone-banner">
-            <p>Cerca del Museo Nacional de Antropología. Puedes descargar la guía para usarla sin internet.</p>
-            <div className="hud-actions">
-              <Link className="btn primary" to="/descarga">Descargar guía</Link>
-              <button className="btn ghost" type="button" onClick={() => setZone(false)}>Ahora no</button>
+          {zone && (
+            <div className="zone-banner">
+              <p>Cerca del Museo Nacional de Antropología. Puedes descargar la guía para usarla sin internet.</p>
+              <div className="hud-actions">
+                <Link className="btn primary" to="/descarga">Descargar guía</Link>
+                <button className="btn ghost" type="button" onClick={() => setZone(false)}>Ahora no</button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </header>
+        <div className={`scanner ${scanning ? 'active' : 'idle'}`} aria-hidden="true">
+          <span className="corner tl" />
+          <span className="corner tr" />
+          <span className="corner bl" />
+          <span className="corner br" />
+          <span className="laser" />
+        </div>
         {camError && <p className="warn cam-error">{camError}</p>}
         <button
           className="detect-card"

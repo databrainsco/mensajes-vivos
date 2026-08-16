@@ -153,8 +153,9 @@ button:disabled, .btn:disabled { opacity: 0.45; }
   z-index: 2;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: calc(0.8rem + env(safe-area-inset-top)) 0.9rem calc(2.2rem + env(safe-area-inset-bottom));
+  gap: 0.7rem;
+  justify-content: flex-start;
+  padding: calc(0.7rem + env(safe-area-inset-top)) 0.9rem calc(2.4rem + env(safe-area-inset-bottom));
   pointer-events: none;
 }
 .hud.live a, .hud.live button { pointer-events: auto; }
@@ -163,6 +164,8 @@ button:disabled, .btn:disabled { opacity: 0.45; }
   flex-direction: column;
   gap: 0.7rem;
   width: 100%;
+  flex-shrink: 0;
+  z-index: 4;
 }
 .hud-actions {
   display: grid;
@@ -187,8 +190,10 @@ button:disabled, .btn:disabled { opacity: 0.45; }
 }
 .scanner {
   pointer-events: none;
-  position: absolute;
-  inset: 12% 8% 28%;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 120px;
+  width: 100%;
   z-index: 1;
   border: 1px solid rgba(184, 153, 85, 0.35);
 }
@@ -259,10 +264,12 @@ button:disabled, .btn:disabled { opacity: 0.45; }
   gap: 0.25rem;
   margin: 0;
   padding: 0.9rem 1rem 1rem;
+  flex-shrink: 0;
+  z-index: 4;
 }
 .zone-banner {
   pointer-events: auto;
-  margin-top: 0.6rem;
+  margin: 0;
   background: rgba(23, 21, 18, 0.88);
   border-radius: 14px;
   padding: 0.8rem;
