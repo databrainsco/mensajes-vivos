@@ -1,13 +1,10 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from './app/session'
 import { SplashScreen } from './screens/SplashScreen'
-import { IntroScreen } from './screens/IntroScreen'
-import { PermissionsScreen } from './screens/PermissionsScreen'
 import { CameraScreen } from './screens/CameraScreen'
 import { ZoneScreen } from './screens/ZoneScreen'
 import { DownloadChoiceScreen } from './screens/DownloadChoiceScreen'
 import { DownloadProgressScreen } from './screens/DownloadProgressScreen'
-import { AnalysisScreen } from './screens/AnalysisScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { SymbolsScreen } from './screens/SymbolsScreen'
 import { MapScreen } from './screens/MapScreen'
@@ -23,13 +20,13 @@ export default function App() {
       <HashRouter>
         <Routes>
           <Route path="/" element={<SplashScreen />} />
-          <Route path="/intro" element={<IntroScreen />} />
-          <Route path="/permisos" element={<PermissionsScreen />} />
+          <Route path="/intro" element={<Navigate to="/" replace />} />
+          <Route path="/permisos" element={<Navigate to="/camara" replace />} />
           <Route path="/camara" element={<CameraScreen />} />
           <Route path="/zona" element={<ZoneScreen />} />
           <Route path="/descarga" element={<DownloadChoiceScreen />} />
           <Route path="/progreso" element={<DownloadProgressScreen />} />
-          <Route path="/analisis" element={<AnalysisScreen />} />
+          <Route path="/analisis" element={<Navigate to="/camara" replace />} />
           <Route path="/resultado" element={<ResultScreen />} />
           <Route path="/simbolos" element={<SymbolsScreen />} />
           <Route path="/mapa" element={<MapScreen />} />

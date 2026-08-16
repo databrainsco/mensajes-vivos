@@ -63,7 +63,7 @@ export class VisionClient {
     return res.caps as DeviceCapabilities
   }
 
-  async analyze(context: AnalyzeContext & { width: number; height: number }): Promise<VisionResult> {
+  async analyze(context: AnalyzeContext & { width: number; height: number; image?: ImageData }): Promise<VisionResult> {
     const res = await this.call('analyze', context)
     if (!res.ok) throw new Error(String(res.error ?? 'analyze failed'))
     return res.result as VisionResult

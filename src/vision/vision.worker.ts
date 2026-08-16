@@ -8,7 +8,7 @@ self.onmessage = async (ev: MessageEvent) => {
   const { id, type, payload } = ev.data as {
     id: number
     type: string
-    payload?: AnalyzeContext & { width?: number; height?: number }
+    payload?: AnalyzeContext & { width?: number; height?: number; image?: ImageData }
   }
   try {
     if (type === 'load') {
@@ -33,8 +33,8 @@ self.onmessage = async (ev: MessageEvent) => {
         return
       }
       busy = true
-      const dummy = { width: payload?.width ?? 320, height: payload?.height ?? 240 } as HTMLCanvasElement
-      const result: VisionResult = await model.analyzeImage(dummy, payload)
+      const input = payload?.image ?? ({ width: payload?.width ?? 320, height: payload?.height ?? 240 } as HTMLCanvasElement)
+      const result: VisionResult = await model.analyzeImage(input, payload)
       busy = false
       self.postMessage({ id, ok: true, result })
       return

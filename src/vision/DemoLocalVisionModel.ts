@@ -1,38 +1,63 @@
 import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, VisionResult } from '../types'
 import { PIECES } from '../demo/packageData'
+import { retrieveCandidates } from '../packages/catalog'
 
-function hashPixels(width: number, height: number): number[] {
-  const seed = (width * 13 + height * 7) % 1000
-  return [
-    (seed % 17) / 17,
-    ((seed * 3) % 19) / 19,
-    ((seed * 5) % 23) / 23,
-    ((seed * 7) % 29) / 29,
-    ((seed * 11) % 31) / 31,
-    ((seed * 13) % 37) / 37,
-    ((seed * 17) % 41) / 41,
-    ((seed * 19) % 43) / 43,
-  ]
+function sceneFromPixels(image: ImageData): (typeof PIECES)[number] | null {
+  const { data } = image
+  let sum = 0
+  let sumSq = 0
+  let red = 0
+  const n = data.length / 4
+  for (let i = 0; i < data.length; i += 4) {
+    const l = (data[i] + data[i + 1] + data[i + 2]) / 3
+    sum += l
+    sumSq += l * l
+    red += data[i]
+  }
+  const mean = sum / n / 255
+  const variance = sumSq / n / (255 * 255) - mean * mean
+  const redness = red / n / 255
+  if (variance < 0.004) return null
+  if (redness > 0.42 && mean > 0.38) return PIECES[2]
+  if (mean < 0.34) return PIECES[1]
+  return PIECES[0]
 }
 
-function pickDemo(context?: AnalyzeContext): (typeof PIECES)[number] | null {
-  const blob = (context?.indoorCues ?? []).join(' ').toLowerCase()
-  if (blob.includes('coatlicue') || blob.includes('serpiente')) return PIECES[0]
-  if (blob.includes('jaguar') || blob.includes('ocelot') || blob.includes('cuauh')) return PIECES[1]
-  if (blob.includes('xolot') || blob.includes('codice') || blob.includes('fejervary')) return PIECES[2]
-  return null
+function isImageData(image: ImageBitmap | ImageData | HTMLCanvasElement): image is ImageData {
+  return typeof ImageData !== 'undefined' && image instanceof ImageData
+}
+
+function embeddingFromImage(image: ImageBitmap | ImageData | HTMLCanvasElement): number[] {
+  if (!isImageData(image)) {
+    const w = 'width' in image ? image.width : 8
+    const h = 'height' in image ? image.height : 8
+    return [w / 400, h / 400, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+  }
+  const { data, width, height } = image
+  const cells = 8
+  const out = new Array<number>(cells).fill(0)
+  const counts = new Array<number>(cells).fill(0)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const lum = (data[i] + data[i + 1] + data[i + 2]) / 765
+      const bucket = Math.min(cells - 1, Math.floor((x / width) * 4) + Math.floor((y / height) * 2) * 4)
+      out[bucket] += lum
+      counts[bucket] += 1
+    }
+  }
+  return out.map((v, i) => (counts[i] ? v / counts[i] : 0))
 }
 
 /**
  * Adaptador de demostración. Nunca debe presentarse como un modelo real.
- * Sustituye esta clase implementando LocalVisionModel con WebGPU/WASM.
  */
 export class DemoLocalVisionModel implements LocalVisionModel {
   private loaded = false
   readonly kind = 'simulation' as const
 
   async loadModel() {
-    await new Promise((r) => setTimeout(r, 400))
+    await new Promise((r) => setTimeout(r, 200))
     this.loaded = true
   }
 
@@ -48,9 +73,7 @@ export class DemoLocalVisionModel implements LocalVisionModel {
   }
 
   async generateEmbedding(image: ImageBitmap | ImageData | HTMLCanvasElement): Promise<number[]> {
-    const w = 'width' in image ? image.width : 64
-    const h = 'height' in image ? image.height : 64
-    return hashPixels(w, h)
+    return embeddingFromImage(image)
   }
 
   async analyzeImage(
@@ -58,58 +81,47 @@ export class DemoLocalVisionModel implements LocalVisionModel {
     context?: AnalyzeContext,
   ): Promise<VisionResult> {
     if (!this.loaded) await this.loadModel()
-    const demo = pickDemo(context)
-    const embedding = demo?.embedding ?? (await this.generateEmbedding(image))
+    void context
+    const pixels = isImageData(image) ? image : null
+    const scene = pixels ? sceneFromPixels(pixels) : null
+    const embedding = scene?.embedding ?? (await this.generateEmbedding(image))
+    const hits = retrieveCandidates(PIECES, embedding, 3)
+    const best = scene ? { piece: scene, score: 0.9 } : hits[0]
+    const score = best?.score ?? 0
 
-    if (!demo) {
+    if (!best || score < 0.72) {
       return {
         tipo_objeto: 'objeto_desconocido',
-        identificacion: { nombre: null, confianza: 0.34, estado: 'descripcion_visual' },
+        identificacion: { nombre: null, confianza: score, estado: 'descripcion_visual' },
         cultura: null,
         periodo: null,
-        elementos: [{ tipo: 'figura', nombre: 'figura antropomorfa con elementos de ave', confianza: 0.55 }],
+        elementos: [{ tipo: 'figura', nombre: 'forma visible en la escena', confianza: 0.4 }],
         instrumentos: [],
         alternativas: [],
-        advertencias: [
-          'Simulación local. No es un resultado de un modelo multimodal real.',
-          'Figura antropomorfa con elementos de ave. No puedo identificar una pieza específica.',
-        ],
-        descripcion_visible: 'Figura antropomorfa con elementos de ave. No puedo identificar una pieza específica.',
+        advertencias: ['Simulación local. No es un resultado de un modelo multimodal real.'],
+        descripcion_visible: 'Mantén la pieza frente a la cámara. Aún no hay una identificación concreta.',
         embedding,
         simulation: true,
       }
     }
 
-    const indoor =
-      demo.id === 'coatlicue'
-        ? { museo: 'Museo Nacional de Antropología', sala: 'Sala Mexica', inventario: demo.inventario }
-        : { museo: 'Museo Nacional de Antropología', sala: demo.sala }
-
+    const demo = best.piece
+    const probable = score < 0.84
     return {
       tipo_objeto: demo.tipo_objeto,
       identificacion: {
         nombre: demo.nombre,
-        confianza: demo.id === 'xolotl-fejervary' ? 0.71 : 0.94,
-        estado: demo.id === 'xolotl-fejervary' ? 'identificacion_probable' : 'confirmada_por_paquete',
+        confianza: score,
+        estado: probable ? 'identificacion_probable' : 'confirmada_por_paquete',
       },
       cultura: null,
       periodo: null,
       elementos: demo.elementos,
       instrumentos: [],
-      alternativas: demo.id === 'xolotl-fejervary' ? [{ nombre: 'Deidad con rasgos caninos no identificada', confianza: 0.4 }] : [],
-      advertencias: [
-        'Simulación local. Demostración con datos precargados.',
-        ...(demo.id === 'xolotl-fejervary'
-          ? ['Posible representación de Xólotl. No se encontró una ficha local suficiente para confirmarlo con certeza máxima.']
-          : []),
-      ],
-      descripcion_visible:
-        demo.id === 'coatlicue'
-          ? 'Escultura antropomorfa monumental con serpientes y collar de elementos orgánicos.'
-          : demo.id === 'ocelotl-cuauhxicalli'
-            ? 'Escultura zoomorfa de felino recostado, superficie labrada.'
-            : 'Pintura de códice con figura de rasgos caninos; no se observan instrumentos musicales.',
-      indoor_cues: indoor,
+      alternativas: hits.slice(1).map((h) => ({ nombre: h.piece.nombre, confianza: h.score })),
+      advertencias: ['Simulación local. El reconocimiento visual definitivo requiere un modelo multimodal real.'],
+      descripcion_visible: `Escena compatible con ${demo.tipo_objeto}.`,
+      indoor_cues: { museo: 'Museo Nacional de Antropología', sala: demo.sala, inventario: demo.inventario },
       embedding,
       simulation: true,
     }

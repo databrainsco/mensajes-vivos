@@ -92,11 +92,9 @@ export function ResultScreen() {
         >
           Guardar descubrimiento
         </button>
-        <Link className="btn ghost row" to="/camara">Analizar otra pieza</Link>
-        <p className="meta">No es correcto: no se inventará otra identidad. Vuelve a capturar o marca descripción visual.</p>
-        <Link className="btn ghost row" to="/camara" onClick={() => session.setDemoHint('none')}>
-          No es correcto
-        </Link>
+        <Link className="btn ghost row" to="/camara">Seguir explorando</Link>
+        <p className="meta">Si no es correcto, vuelve a la cámara. No se inventará otra identidad.</p>
+        <Link className="btn ghost row" to="/camara">No es correcto</Link>
       </div>
     </main>
   )

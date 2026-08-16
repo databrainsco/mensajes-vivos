@@ -17,8 +17,6 @@ export interface Session {
   setCapture: (s: string | null) => void
   lastDiscovery: Discovery | null
   setLastDiscovery: (d: Discovery | null) => void
-  demoHint: 'coatlicue' | 'ocelotl' | 'xolotl' | 'none'
-  setDemoHint: (h: Session['demoHint']) => void
 }
 
 const Ctx = createContext<Session | null>(null)
@@ -31,7 +29,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [vision, setVision] = useState<VisionResult | null>(null)
   const [capture, setCapture] = useState<string | null>(null)
   const [lastDiscovery, setLastDiscovery] = useState<Discovery | null>(null)
-  const [demoHint, setDemoHint] = useState<Session['demoHint']>('coatlicue')
 
   const value = useMemo(
     () => ({
@@ -49,10 +46,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setCapture,
       lastDiscovery,
       setLastDiscovery,
-      demoHint,
-      setDemoHint,
     }),
-    [privacy, coords, activePackage, pendingLevel, vision, capture, lastDiscovery, demoHint],
+    [privacy, coords, activePackage, pendingLevel, vision, capture, lastDiscovery],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
