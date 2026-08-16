@@ -35,9 +35,9 @@ export function PackagesScreen() {
           <h2>{p.manifest.venueName}</h2>
           <p className="meta">{p.manifest.roomName} · {p.level} · v{p.manifest.version}</p>
           {p.manifest.demo && <p className="badge">Demostración</p>}
-          <button className="btn secondary" type="button" onClick={() => session.setActivePackage(p)}>Usar guía</button>
+          <button className="btn secondary row" type="button" onClick={() => session.setActivePackage(p)}>Usar guía</button>
           <button
-            className="btn ghost"
+            className="btn ghost row"
             type="button"
             onClick={() => void deletePackage(p.id).then(() => listPackages().then(setItems))}
           >

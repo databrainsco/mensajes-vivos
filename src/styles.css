@@ -29,17 +29,27 @@ h1, h2, .display {
 
 a { color: var(--gold); }
 button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--tap);
-  min-width: var(--tap);
-  border: 0;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   font: inherit;
   font-weight: 600;
   padding: 0.7rem 1rem;
+  margin: 0;
   cursor: pointer;
+  box-sizing: border-box;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1.2;
 }
 .btn.primary { background: var(--cinnabar); color: var(--ivory); }
 .btn.secondary { background: var(--jade); color: var(--ivory); }
+button:disabled, .btn:disabled { opacity: 0.45; }
 .btn.ghost {
   background: rgba(184, 153, 85, 0.12);
   color: var(--ivory);
@@ -80,7 +90,7 @@ button, .btn {
 }
 
 
-.btn.row { width: 100%; display: block; margin: 0.4rem 0; text-align: center; text-decoration: none; }
+.btn.row { width: 100%; display: flex; margin: 0; text-align: center; text-decoration: none; }
 
 .screen {
   min-height: 100dvh;
@@ -104,7 +114,12 @@ button, .btn {
   background: #221e1a;
   border-radius: var(--radius);
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
+.card h2 { margin: 0; }
+.card .meta, .card .badge { margin: 0; }
 .screen.ivory .card { background: #fffdf6; }
 .meta { color: var(--stone); font-size: 0.9rem; }
 .progress {
@@ -145,22 +160,30 @@ button, .btn {
 .hud.live a, .hud.live button { pointer-events: auto; }
 .hud-top {
   display: flex;
-  justify-content: space-between;
-  gap: 0.6rem;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
 }
-.hud-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.hud-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
 .icon-btn {
+  width: 100%;
   min-height: var(--tap);
-  padding: 0 0.75rem;
-  border-radius: 999px;
-  background: rgba(23, 21, 18, 0.55);
+  padding: 0.45rem 0.35rem;
+  border-radius: 12px;
+  background: rgba(23, 21, 18, 0.62);
   color: var(--ivory);
-  border: 1px solid rgba(244, 238, 223, 0.25);
+  border: 1px solid rgba(184, 153, 85, 0.45);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  font-size: 0.85rem;
+  justify-content: center;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 .scanner {
   pointer-events: none;
@@ -218,18 +241,24 @@ button, .btn {
   background: linear-gradient(to top, rgba(23, 21, 18, 0.92), transparent);
   pointer-events: none;
 }
+.zone-banner .hud-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.65rem;
+}
 .detect-card {
   pointer-events: auto;
   width: 100%;
   text-align: left;
+  align-items: flex-start;
   background: rgba(23, 21, 18, 0.82);
   color: var(--ivory);
   border: 1px solid rgba(184, 153, 85, 0.45);
   border-radius: 18px;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  margin-bottom: 1.6rem;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.9rem 1rem 1rem;
 }
 .zone-banner {
   pointer-events: auto;
@@ -238,6 +267,7 @@ button, .btn {
   border-radius: 14px;
   padding: 0.8rem;
 }
+.zone-banner p { margin: 0; }
 .cam-error { position: relative; z-index: 3; padding: 0 0.9rem; }
 .tiny { font-size: 0.75rem; color: var(--ivory); }
 

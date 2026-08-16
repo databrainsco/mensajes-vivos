@@ -65,9 +65,7 @@ export function ModelScreen() {
             <span style={{ width: `${pct}%` }} />
           </div>
           <p className="meta">{paused ? 'Pausa' : `Descargando ${progress?.file ?? 'modelo'} · ${pct}%`}</p>
-          <button
-            className="btn ghost"
-            type="button"
+          <button className="btn ghost row" type="button"
             onClick={() => {
               const next = !paused
               setPaused(next)
@@ -85,14 +83,14 @@ export function ModelScreen() {
             <span>Confirmo si estoy en datos móviles (~92 MB)</span>
             <input type="checkbox" checked={mobileOk} onChange={(e) => setMobileOk(e.target.checked)} />
           </label>
-          <button className="btn primary" type="button" disabled={!mobileOk} onClick={() => void download()}>
+          <button className="btn primary row" type="button" disabled={!mobileOk} onClick={() => void download()}>
             Descargar modelo
           </button>
         </>
       )}
       {record?.ready && (
         <button
-          className="btn ghost"
+          className="btn ghost row"
           type="button"
           onClick={() => void deleteVisionModel().then(() => getInstalledModel().then(setRecord))}
         >

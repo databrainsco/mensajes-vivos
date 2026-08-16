@@ -59,7 +59,7 @@ export function ResultScreen() {
       {card?.lugares.hallazgo && <p>Hallazgo: {card.lugares.hallazgo.etiqueta}</p>}
       {session.coords && <p>Ubicación actual: {session.coords.lat.toFixed(4)}, {session.coords.lng.toFixed(4)}</p>}
       <div className="stack">
-        <button className="btn primary" type="button" onClick={() => speak(card?.resumen ?? vision.descripcion_visible)}>
+        <button className="btn primary row" type="button" onClick={() => speak(card?.resumen ?? vision.descripcion_visible)}>
           Escuchar historia
         </button>
         <Link className="btn secondary row" to="/simbolos">Explorar símbolos</Link>
@@ -76,7 +76,7 @@ export function ResultScreen() {
           </details>
         )}
         <button
-          className="btn ghost"
+          className="btn ghost row"
           type="button"
           onClick={() => {
             const item = {

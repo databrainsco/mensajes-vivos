@@ -171,7 +171,7 @@ export function CameraScreen() {
           </div>
           <div className="hud-actions">
             <button className="icon-btn" type="button" aria-label="Antorcha" onClick={() => void toggleTorch()}>
-              {torch ? 'Apagar antorcha' : 'Antorcha'}
+              {torch ? 'Luz off' : 'Luz'}
             </button>
             <Link className="icon-btn" to="/paquetes" aria-label="Guías">Guías</Link>
             <Link className="icon-btn" to="/privacidad" aria-label="Privacidad">Privacidad</Link>
