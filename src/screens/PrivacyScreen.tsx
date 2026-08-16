@@ -6,6 +6,7 @@ import { clearDiscoveries, estimateUsage, formatBytes, getPrivacy, setPrivacy } 
 export function PrivacyScreen() {
   const session = useSession()
   const [usage, setUsage] = useState({ usage: 0, quota: 0 })
+  const [cleared, setCleared] = useState(false)
   useEffect(() => {
     void estimateUsage().then(setUsage)
     void getPrivacy().then(session.setPrivacy)
@@ -18,43 +19,53 @@ export function PrivacyScreen() {
   }
 
   return (
-    <main className="screen ivory stack">
-      <h1>Privacidad y almacenamiento</h1>
+    <main className="screen stack">
+      <p className="kicker">Códice de resguardo</p>
+      <h1>Privacidad</h1>
       <p>
         Tus imágenes se procesan en este dispositivo. No se guardan ni se envían a internet, salvo que tú
         decidas conservar un descubrimiento.
       </p>
-      <p>Espacio estimado: {formatBytes(usage.usage)} de {formatBytes(usage.quota)}</p>
-      <label>
+      <p className="meta">Espacio en este teléfono: {formatBytes(usage.usage)} de {formatBytes(usage.quota)}</p>
+
+      <label className="toggle-row">
+        <span>Usar ubicación para detectar museos</span>
         <input
           type="checkbox"
           checked={session.privacy.locationEnabled}
-          onChange={(e) => patch({ locationEnabled: e.target.checked, cameraOnly: !e.target.checked && session.privacy.cameraOnly })}
-        />{' '}
-        Ubicación activa
+          onChange={(e) => patch({ locationEnabled: e.target.checked, cameraOnly: !e.target.checked })}
+        />
       </label>
-      <label>
+      <label className="toggle-row">
+        <span>Sólo cámara, sin GPS</span>
         <input
           type="checkbox"
           checked={session.privacy.cameraOnly}
           onChange={(e) => patch({ cameraOnly: e.target.checked, locationEnabled: !e.target.checked })}
-        />{' '}
-        Utilizar sólo la cámara
+        />
       </label>
-      <label>
+      <label className="toggle-row">
+        <span>Vibrar al reconocer una pieza</span>
         <input
           type="checkbox"
           checked={session.privacy.vibrateOnMatch}
           onChange={(e) => patch({ vibrateOnMatch: e.target.checked })}
-        />{' '}
-        Vibración al reconocer
+        />
       </label>
-      <button className="btn ghost" type="button" onClick={() => { session.setCapture(null); void clearDiscoveries() }}>
+
+      <button
+        className="btn primary row"
+        type="button"
+        onClick={() => {
+          session.setCapture(null)
+          void clearDiscoveries().then(() => setCleared(true))
+        }}
+      >
         Borrar capturas e historial
       </button>
-      <p className="meta">Revisa permisos del sistema para cámara y ubicación.</p>
-      <Link to="/paquetes">Eliminar paquetes</Link>
-      <Link to="/camara">Volver</Link>
+      {cleared && <p className="meta">Historial borrado en este dispositivo.</p>}
+      <Link className="btn secondary row" to="/paquetes">Gestionar guías descargadas</Link>
+      <Link className="btn ghost row" to="/camara">Volver a la cámara</Link>
     </main>
   )
 }

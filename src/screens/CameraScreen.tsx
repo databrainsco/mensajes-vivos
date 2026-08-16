@@ -144,7 +144,13 @@ export function CameraScreen() {
   return (
     <div className="camera-root">
       <video ref={video} autoPlay playsInline muted aria-label="Exploración en vivo" />
-      <div className={`scanline ${scanning ? 'on' : ''}`} aria-hidden="true" />
+      <div className={`scanner ${scanning ? 'active' : 'idle'}`} aria-hidden="true">
+        <span className="corner tl" />
+        <span className="corner tr" />
+        <span className="corner bl" />
+        <span className="corner br" />
+        <span className="laser" />
+      </div>
       <div className="hud live">
         <header className="hud-top">
           <div>
@@ -152,10 +158,10 @@ export function CameraScreen() {
             <p className="tiny">{status}</p>
           </div>
           <div className="hud-actions">
-            <button className="icon-btn" type="button" aria-label="Iluminación" onClick={() => void toggleTorch()}>
-              {torch ? 'Luz' : 'Luz'}
+            <button className="icon-btn" type="button" aria-label="Antorcha" onClick={() => void toggleTorch()}>
+              {torch ? 'Apagar antorcha' : 'Antorcha'}
             </button>
-            <Link className="icon-btn" to="/paquetes" aria-label="Paquetes">Guías</Link>
+            <Link className="icon-btn" to="/paquetes" aria-label="Guías">Guías</Link>
             <Link className="icon-btn" to="/privacidad" aria-label="Privacidad">Privacidad</Link>
           </div>
         </header>
@@ -176,11 +182,11 @@ export function CameraScreen() {
             if (live) nav('/resultado')
           }}
         >
-          <span className="kicker">{scanning ? 'Detectando' : 'En vivo'}</span>
-          <strong>{label ?? 'Buscando en la escena'}</strong>
+          <span className="kicker">{scanning ? 'Escaneando la pieza' : 'Reconocimiento'}</span>
+          <strong>{label ?? 'Apunta hacia la pieza'}</strong>
           <span className="tiny">{hint}</span>
           {live?.identificacion.confianza ? (
-            <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza</span>
+            <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza · toca para abrir la ficha</span>
           ) : null}
         </button>
       </div>

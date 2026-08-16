@@ -15,6 +15,7 @@ export function SplashScreen() {
 
   return (
     <main className="screen splash">
+      <div className="ornament" aria-hidden="true" />
       <p className="kicker">México antiguo</p>
       <h1 className="display">Mensajes Vivos</h1>
       <p className="slogan">Mira. Reconoce. Escucha el México antiguo.</p>

@@ -7,7 +7,8 @@ export function SymbolsScreen() {
   const session = useSession()
   const card = cardForVision(session.vision?.identificacion.nombre ?? null, session.activePackage?.pieces ?? PIECES)
   return (
-    <main className="screen ivory stack">
+    <main className="screen stack">
+      <p className="kicker">Glifos</p>
       <h1>Símbolos</h1>
       {!card && <p>Solo se muestran lecturas ligadas a una ficha local.</p>}
       {card?.simbolos.map((s) => (
@@ -19,7 +20,7 @@ export function SymbolsScreen() {
       {card?.lamina_secuencia && (
         <p>Secuencia de láminas: {card.lamina_secuencia.join(' → ')}</p>
       )}
-      <Link to="/resultado">Volver</Link>
+      <Link className="btn ghost row" to="/resultado">Volver a la ficha</Link>
     </main>
   )
 }

@@ -6,7 +6,7 @@
   --gold: #b89955;
   --stone: #7b756b;
   --font-ui: 'Source Sans 3', system-ui, sans-serif;
-  --font-display: Fraunces, Georgia, serif;
+  --font-display: Cinzel, Palatino, serif;
   --radius: 14px;
   --tap: 44px;
 }
@@ -15,7 +15,8 @@
 html, body, #root { margin: 0; min-height: 100%; height: 100%; }
 body {
   font-family: var(--font-ui);
-  background: var(--obsidian);
+  background:
+    radial-gradient(ellipse at top, #2a2218 0%, var(--obsidian) 55%);
   color: var(--ivory);
   line-height: 1.45;
 }
@@ -23,7 +24,7 @@ body {
 h1, h2, .display {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.04em;
 }
 
 a { color: var(--gold); }
@@ -39,7 +40,46 @@ button, .btn {
 }
 .btn.primary { background: var(--cinnabar); color: var(--ivory); }
 .btn.secondary { background: var(--jade); color: var(--ivory); }
-.btn.ghost { background: transparent; color: var(--ivory); border: 1px solid var(--stone); }
+.btn.ghost {
+  background: rgba(184, 153, 85, 0.12);
+  color: var(--ivory);
+  border: 1px solid var(--gold);
+}
+.screen.ivory .btn.ghost {
+  color: var(--obsidian);
+  border-color: var(--cinnabar);
+  background: transparent;
+}
+.screen.ivory .btn.primary { color: var(--ivory); }
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: #221e1a;
+  border: 1px solid rgba(184, 153, 85, 0.35);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  min-height: var(--tap);
+}
+.toggle-row input { width: 22px; height: 22px; accent-color: var(--cinnabar); }
+
+.ornament {
+  height: 10px;
+  margin-bottom: 1.2rem;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--gold) 0 10px,
+      transparent 10px 16px,
+      var(--cinnabar) 16px 22px,
+      transparent 22px 28px
+    );
+  opacity: 0.85;
+}
+
+
 .btn.row { width: 100%; display: block; margin: 0.4rem 0; text-align: center; text-decoration: none; }
 
 .screen {
@@ -122,23 +162,46 @@ button, .btn {
   align-items: center;
   font-size: 0.85rem;
 }
-.scanline {
+.scanner {
   pointer-events: none;
   position: absolute;
-  inset: 0;
+  inset: 12% 8% 28%;
   z-index: 1;
-  background: linear-gradient(to bottom, transparent 0%, rgba(184, 153, 85, 0.18) 50%, transparent 100%);
-  background-size: 100% 28%;
-  background-repeat: no-repeat;
-  opacity: 0;
+  border: 1px solid rgba(184, 153, 85, 0.35);
 }
-.scanline.on {
-  opacity: 1;
-  animation: scan 1.1s linear infinite;
+.scanner .corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--gold);
 }
-@keyframes scan {
-  from { background-position: 0 -20%; }
-  to { background-position: 0 120%; }
+.scanner .tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.scanner .tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; }
+.scanner .bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; }
+.scanner .br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+.scanner .laser {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cinnabar);
+  box-shadow: 0 0 16px 4px rgba(184, 66, 47, 0.85), 0 0 40px rgba(184, 153, 85, 0.45);
+  animation: laser-idle 2.8s linear infinite;
+}
+.scanner.active .laser {
+  animation: laser-scan 1.15s linear infinite;
+  background: #f4eedf;
+  box-shadow: 0 0 18px 6px rgba(244, 238, 223, 0.7), 0 0 28px 8px rgba(184, 66, 47, 0.55);
+}
+@keyframes laser-idle {
+  0% { top: 6%; opacity: 0.45; }
+  50% { top: 88%; opacity: 0.9; }
+  100% { top: 6%; opacity: 0.45; }
+}
+@keyframes laser-scan {
+  0% { top: 4%; }
+  100% { top: 92%; }
 }
 .version-bar {
   position: fixed;
