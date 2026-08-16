@@ -1,0 +1,8 @@
+{
+  "id": "mna-sala-mexica",
+  "version": "1.0.0",
+  "venueId": "mna",
+  "demo": true,
+  "checksum": "demo-sha256-mna-sala-mexica-v1",
+  "signature": "demo-unsigned-local-package"
+}

@@ -1,0 +1,10 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "kind": "resguardo", "label": "Museo Nacional de Antropología" },
+      "geometry": { "type": "Point", "coordinates": [-99.1863, 19.426] }
+    }
+  ]
+}
