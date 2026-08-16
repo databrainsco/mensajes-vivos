@@ -4,13 +4,16 @@ import { useSession } from '../app/session'
 import { PIECES } from '../demo/packageData'
 import { saveDiscovery } from '../packages/db'
 import { cardForVision } from './AnalysisScreen'
-
-import type { VerificationState, VisualElement } from '../types'
+import type { PieceCard, VerificationState } from '../types'
 
 const STATE_COPY: Record<VerificationState, string> = {
-  confirmada_por_paquete: 'Confirmada por paquete local',
+  confirmada_por_paquete: 'Confirmada por ficha local',
   identificacion_probable: 'Identificación probable',
-  descripcion_visual: 'Descripción visual',
+  descripcion_visual: 'Solo descripción visual',
+}
+
+function narrationFor(card: PieceCard) {
+  return card.texto_narracion
 }
 
 export function ResultScreen() {
@@ -18,63 +21,108 @@ export function ResultScreen() {
   const vision = session.vision
   const pieces = session.activePackage?.pieces ?? PIECES
   const card = cardForVision(vision?.identificacion.nombre ?? null, pieces)
+  const hasAnimals = Boolean(card && card.animales.length > 0)
+  const hasInstruments = Boolean(card && card.instrumentos.length > 0)
+  const hasSound = hasAnimals || hasInstruments
 
   if (!vision) {
     return (
-      <main className="screen">
+      <main className="screen stack">
         <p>No hay análisis.</p>
-        <Link to="/camara">Volver</Link>
+        <Link className="btn ghost row" to="/camara">Volver a la cámara</Link>
       </main>
     )
   }
 
-  const headline =
-    vision.identificacion.estado === 'confirmada_por_paquete' && card
-      ? `${card.nombre}. Coincidencia alta con la ficha de la ${card.sala}.`
-      : vision.identificacion.estado === 'identificacion_probable'
-        ? `Posible representación de ${vision.identificacion.nombre}. No se encontró una ficha local suficiente para confirmarlo.`
-        : vision.descripcion_visible
+  if (!card) {
+    return (
+      <main className="screen stack">
+        <p className="kicker">Resultado</p>
+        <h1>Pieza no identificada</h1>
+        <p>No hay ficha local suficiente. No se inventa una identidad.</p>
+        <p>{vision.descripcion_visible}</p>
+        <Link className="btn primary row" to="/camara">Seguir explorando</Link>
+      </main>
+    )
+  }
 
   return (
     <main className="screen stack">
-      <p className="badge">Demostración con datos precargados</p>
-      <h1>{card?.nombre ?? 'Sin identidad inventada'}</h1>
-      {card?.nombre_alternativo && <p className="meta">{card.nombre_alternativo}</p>}
-      {session.capture && <img className="preview" src={session.capture} alt="Captura temporal, no almacenada aún" />}
-      <p>{headline}</p>
-      <p className="meta">
-        Confianza: {Math.round(vision.identificacion.confianza * 100)}% · {STATE_COPY[vision.identificacion.estado]}
-      </p>
-      {card && (
-        <>
-          <p>{card.cultura} · {card.periodo} · {card.tipo_objeto}</p>
-          <p>{card.resumen}</p>
-        </>
+      <p className="kicker">{card.sala}</p>
+      <h1>{card.nombre}</h1>
+      {card.nombre_alternativo && <p className="meta">{card.nombre_alternativo}</p>}
+      {session.capture && (
+        <img className="preview" src={session.capture} alt={`Vista de ${card.nombre}`} />
       )}
-      <ul>
-        {vision.elementos.map((e: VisualElement) => (
-          <li key={e.nombre}>{e.tipo}: {e.nombre} ({Math.round(e.confianza * 100)}%)</li>
-        ))}
-      </ul>
-      {card?.lugares.hallazgo && <p>Hallazgo: {card.lugares.hallazgo.etiqueta}</p>}
-      {session.coords && <p>Ubicación actual: {session.coords.lat.toFixed(4)}, {session.coords.lng.toFixed(4)}</p>}
+
+      <p className="meta">
+        {card.cultura} · {card.periodo} · {card.tipo_objeto}
+        {card.inventario ? ` · Inv. ${card.inventario}` : ''}
+      </p>
+      <p className="meta">{STATE_COPY[vision.identificacion.estado]} · {Math.round(vision.identificacion.confianza * 100)}%</p>
+
+      <section className="card">
+        <h2>Sobre la pieza</h2>
+        <p>{card.resumen}</p>
+      </section>
+
+      {card.elementos.length > 0 && (
+        <section className="card">
+          <h2>Elementos visibles</h2>
+          <ul>
+            {card.elementos.map((e) => (
+              <li key={e.nombre}>{e.nombre}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="card">
+        <h2>Lugares</h2>
+        <p><strong>Resguardo:</strong> {card.lugares.resguardo.etiqueta}</p>
+        <p><strong>Hallazgo:</strong> {card.lugares.hallazgo.etiqueta}</p>
+        {card.lugares.hallazgo.nota && <p className="meta">{card.lugares.hallazgo.nota}</p>}
+        {card.lugares.elaboracion && (
+          <p><strong>Elaboración:</strong> {card.lugares.elaboracion.etiqueta}</p>
+        )}
+      </section>
+
+      {card.simbolos.length > 0 && (
+        <section className="card">
+          <h2>Símbolos</h2>
+          {card.simbolos.slice(0, 2).map((s) => (
+            <div key={s.id}>
+              <strong>{s.titulo}</strong>
+              <p>{s.texto}</p>
+            </div>
+          ))}
+          <Link to="/simbolos">Ver todos los símbolos</Link>
+        </section>
+      )}
+
       <div className="stack">
-        <button className="btn primary row" type="button" onClick={() => speak(card?.resumen ?? vision.descripcion_visible)}>
+        <button className="btn primary row" type="button" onClick={() => speak(narrationFor(card))}>
           Escuchar historia
         </button>
         <Link className="btn secondary row" to="/simbolos">Explorar símbolos</Link>
-        <Link className="btn ghost row" to="/mapa">Ver lugar del hallazgo / mapa</Link>
-        <Link className="btn ghost row" to="/sonido">Animales e instrumentos</Link>
-        {card && (
-          <details>
-            <summary>Consultar fuentes</summary>
-            <ul>
-              {card.fuentes.map((f) => (
-                <li key={f.titulo}>{f.titulo} — {f.procedencia}</li>
-              ))}
-            </ul>
-          </details>
+        <Link className="btn ghost row" to="/mapa">Ver mapa</Link>
+        {hasSound && (
+          <Link className="btn ghost row" to="/sonido">
+            {hasAnimals && hasInstruments
+              ? 'Animales e instrumentos'
+              : hasAnimals
+                ? 'Escuchar animal'
+                : 'Escuchar instrumento'}
+          </Link>
         )}
+        <details>
+          <summary>Fuentes</summary>
+          <ul>
+            {card.fuentes.map((f) => (
+              <li key={f.titulo}>{f.titulo} — {f.procedencia}</li>
+            ))}
+          </ul>
+        </details>
         <button
           className="btn ghost row"
           type="button"
@@ -82,7 +130,7 @@ export function ResultScreen() {
             const item = {
               id: crypto.randomUUID(),
               savedAt: new Date().toISOString(),
-              pieceId: card?.id,
+              pieceId: card.id,
               vision,
               captureDataUrl: session.capture ?? undefined,
             }
@@ -93,7 +141,6 @@ export function ResultScreen() {
           Guardar descubrimiento
         </button>
         <Link className="btn ghost row" to="/camara">Seguir explorando</Link>
-        <p className="meta">Si no es correcto, vuelve a la cámara. No se inventará otra identidad.</p>
         <Link className="btn ghost row" to="/camara">No es correcto</Link>
       </div>
     </main>

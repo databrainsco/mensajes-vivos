@@ -114,6 +114,8 @@ export interface PieceCard {
     representado?: GeoPlace
   }
   fuentes: Array<{ titulo: string; procedencia: string; url?: string }>
+  /** Texto hablado: solo sobre la pieza, sin mencionar el modelo. */
+  texto_narracion: string
   narracion?: string
   lamina_secuencia?: string[]
   embedding: number[]

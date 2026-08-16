@@ -8,25 +8,33 @@ export function SoundScreen() {
   const session = useSession()
   const card = cardForVision(session.vision?.identificacion.nombre ?? null, session.activePackage?.pieces ?? PIECES)
   const base = `${import.meta.env.BASE_URL}packages/mna-sala-mexica/`
+  const animals = card?.animales ?? []
+  const instruments = card?.instrumentos ?? []
 
   return (
     <main className="screen stack">
-      <h1>Reproductor sonoro</h1>
-      {card?.animales.map((a) => (
+      <p className="kicker">Sonidos</p>
+      <h1>{card?.nombre ?? 'Reproductor'}</h1>
+
+      {!card && <p>No hay ficha sonora porque no se identificó una pieza.</p>}
+
+      {card && animals.length === 0 && instruments.length === 0 && (
+        <p>Esta ficha no incluye animales ni instrumentos documentados.</p>
+      )}
+
+      {animals.map((a) => (
         <SoundPlayer
           key={a.nombre}
           title={a.nombre}
           src={a.audio ? base + a.audio : undefined}
           captions={a.nota}
           category="sonido_natural_referencia"
-          source="Paquete local de demostración"
+          source="Paquete local"
           note={a.nota}
         />
       ))}
-      {card && card.instrumentos.length === 0 && (
-        <SoundPlayer title="Instrumento" source="Paquete local" captions="" />
-      )}
-      {card?.instrumentos.map((i) => (
+
+      {instruments.map((i) => (
         <SoundPlayer
           key={i.nombre}
           title={i.nombre}
@@ -37,8 +45,8 @@ export function SoundScreen() {
           note={i.nota}
         />
       ))}
-      {!card && <p>No hay ficha sonora para una descripción visual.</p>}
-      <Link to="/resultado">Volver</Link>
+
+      <Link className="btn ghost row" to="/resultado">Volver a la ficha</Link>
     </main>
   )
 }

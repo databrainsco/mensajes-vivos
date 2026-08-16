@@ -27,12 +27,14 @@ export const PIECES: PieceCard[] = [
     nombre: 'Coatlicue',
     nombre_alternativo: 'Coatlicue mayor',
     cultura: 'Mexica',
-    periodo: 'Posclásico tardío',
+    periodo: 'Posclásico tardío (hacia 1400–1521)',
     tipo_objeto: 'escultura',
     sala: 'Sala Mexica',
     inventario: '10-1029',
     resumen:
-      'Escultura monumental de andesita que representa a Coatlicue. La ficha local resume lo documentado en el acervo del museo; no sustituye la cédula de sala.',
+      'Escultura monumental de andesita que representa a Coatlicue, deidad asociada a la tierra y a la fertilidad en la tradición mexica. Mide más de dos metros y medio. En la parte superior, dos serpientes enfrentadas forman un rostro; el cuerpo lleva un collar de manos, corazones y un cráneo, y un faldellín de serpientes entrelazadas.',
+    texto_narracion:
+      'Coatlicue. Escultura mexica del Posclásico tardío, tallada en andesita. Se conserva en el Museo Nacional de Antropología, en la Sala Mexica. Fue hallada en 1790 en la Plaza Mayor de la Ciudad de México, el antiguo Zócalo. Muestra a Coatlicue con un collar de manos y corazones, un cráneo al centro y un faldellín de serpientes. Es una de las piezas más importantes del acervo mexica del museo.',
     elementos: [
       { tipo: 'figura', nombre: 'serpientes entrelazadas', confianza: 0.9 },
       { tipo: 'adorno', nombre: 'collar de manos y corazones', confianza: 0.86 },
@@ -40,8 +42,21 @@ export const PIECES: PieceCard[] = [
     instrumentos: [],
     animales: [],
     simbolos: [
-      { id: 'serpiente', titulo: 'Serpientes', texto: 'El faldellín de serpientes es un atributo iconográfico asociado a Coatlicue en las fuentes coloniales y en la propia escultura.' },
-      { id: 'collar', titulo: 'Collar', texto: 'El collar de manos, corazones y cráneos se describe en la ficha museográfica; su lectura ritual sigue siendo objeto de estudio.' },
+      {
+        id: 'serpiente',
+        titulo: 'Faldellín de serpientes',
+        texto: 'El faldellín de serpientes es un atributo iconográfico asociado a Coatlicue en las fuentes coloniales y en la propia escultura.',
+      },
+      {
+        id: 'collar',
+        titulo: 'Collar de manos y corazones',
+        texto: 'El collar de manos, corazones y cráneos se describe en las fichas museográficas; su lectura ritual sigue siendo objeto de estudio.',
+      },
+      {
+        id: 'rostro',
+        titulo: 'Rostro de serpientes',
+        texto: 'Dos cabezas de serpiente enfrentadas forman el rostro de la figura, un recurso frecuente en la escultura mexica monumental.',
+      },
     ],
     lugares: {
       resguardo: {
@@ -63,14 +78,8 @@ export const PIECES: PieceCard[] = [
       },
     },
     fuentes: [
-      {
-        titulo: 'Ficha de sala (demostración precargada)',
-        procedencia: 'Paquete local mna-sala-mexica · datos de demostración etiquetados',
-      },
-      {
-        titulo: 'Referencia de hallazgo 1790',
-        procedencia: 'Síntesis educativa a partir de la historiografía del hallazgo en la Plaza Mayor',
-      },
+      { titulo: 'Ficha de sala · Museo Nacional de Antropología', procedencia: 'Paquete local Sala Mexica' },
+      { titulo: 'Hallazgo de 1790 en la Plaza Mayor', procedencia: 'Historiografía del hallazgo colonial' },
     ],
     narracion: 'narrations/coatlicue.wav',
     embedding: [0.92, 0.11, 0.08, 0.71, 0.22, 0.05, 0.64, 0.18],
@@ -85,10 +94,10 @@ export const PIECES: PieceCard[] = [
     sala: 'Sala Mexica',
     inventario: '10-220916',
     resumen:
-      'Recipiente ritual en forma de jaguar. La función de cuauhxicalli se toma de la ficha del paquete, no de una inferencia libre del modelo.',
-    elementos: [
-      { tipo: 'animal', nombre: 'jaguar', confianza: 0.98 },
-    ],
+      'Recipiente ritual de piedra en forma de jaguar o ocelote (océlotl). Los cuauhxicalli servían en contextos ceremoniales mexicas como vasos para ofrendas. La pieza se resguarda en la Sala Mexica del Museo Nacional de Antropología.',
+    texto_narracion:
+      'Océlotl Cuauhxicalli. Escultura mexica del Posclásico tardío en forma de jaguar. Es un recipiente ritual, un cuauhxicalli, asociado a ofrendas en el mundo mexica. Se conserva en el Museo Nacional de Antropología, Sala Mexica. El animal representado es el jaguar, llamado ocelotl en náhuatl. El lugar de hallazgo se sitúa de forma aproximada en el recinto sagrado de Tenochtitlan, en el Centro Histórico de la Ciudad de México.',
+    elementos: [{ tipo: 'animal', nombre: 'jaguar', confianza: 0.98 }],
     instrumentos: [],
     animales: [
       {
@@ -99,8 +108,16 @@ export const PIECES: PieceCard[] = [
       },
     ],
     simbolos: [
-      { id: 'cuauhxicalli', titulo: 'Cuauhxicalli', texto: 'Vasija o recipiente asociado a ofrendas; la identificación funcional procede de la ficha verificada del paquete.' },
-      { id: 'ocelotl', titulo: 'Océlotl', texto: 'El animal representado es un jaguar (océlotl). La especie se afirma solo porque la ficha y la forma coinciden.' },
+      {
+        id: 'cuauhxicalli',
+        titulo: 'Cuauhxicalli',
+        texto: 'Vasija o recipiente asociado a ofrendas en contextos rituales mexicas, según la ficha del museo.',
+      },
+      {
+        id: 'ocelotl',
+        titulo: 'Océlotl',
+        texto: 'El animal representado es un jaguar. En náhuatl se le llama ocelotl.',
+      },
     ],
     lugares: {
       resguardo: {
@@ -116,10 +133,7 @@ export const PIECES: PieceCard[] = [
       },
     },
     fuentes: [
-      {
-        titulo: 'Ficha de sala (demostración precargada)',
-        procedencia: 'Paquete local mna-sala-mexica · datos de demostración etiquetados',
-      },
+      { titulo: 'Ficha de sala · Museo Nacional de Antropología', procedencia: 'Paquete local Sala Mexica' },
     ],
     narracion: 'narrations/ocelotl.wav',
     embedding: [0.12, 0.94, 0.08, 0.21, 0.77, 0.15, 0.09, 0.62],
@@ -128,26 +142,34 @@ export const PIECES: PieceCard[] = [
     id: 'xolotl-fejervary',
     nombre: 'Xólotl en el Códice Fejérváry-Mayer',
     nombre_alternativo: 'Lámina con deidad de rasgos caninos',
-    cultura: 'Tradición pictórica del Posclásico (atribución discutida)',
+    cultura: 'Tradición pictórica del Posclásico',
     periodo: 'Posclásico',
     tipo_objeto: 'codice',
-    sala: 'Sala Mexica (lámina de referencia en el paquete)',
+    sala: 'Referencia de códice en el paquete',
     resumen:
-      'La lámina muestra una figura con rasgos caninos asociada a Xólotl en la literatura del códice. No se identifican instrumentos musicales en esta escena.',
-    elementos: [
-      { tipo: 'deidad', nombre: 'rasgos caninos', confianza: 0.88 },
-    ],
+      'Lámina del Códice Fejérváry-Mayer con una figura de rasgos caninos asociada a Xólotl en la literatura del manuscrito. El códice se conserva hoy en el World Museum de Liverpool. La procedencia exacta del manuscrito es desconocida y su región de elaboración se discute entre varias propuestas.',
+    texto_narracion:
+      'Xólotl en el Códice Fejérváry-Mayer. Se trata de una lámina pictórica del Posclásico. La figura muestra rasgos caninos y se asocia a Xólotl en los estudios del códice. El manuscrito se resguarda en el World Museum de Liverpool. No se conoce con certeza el lugar exacto de origen. Tampoco hay instrumentos musicales documentados en esta escena.',
+    elementos: [{ tipo: 'deidad', nombre: 'rasgos caninos', confianza: 0.88 }],
     instrumentos: [],
     animales: [
       {
-        nombre: 'xoloitzcuintle (referencia contemporánea)',
+        nombre: 'xoloitzcuintle',
         audio: 'sounds/animals/xolo.wav',
-        nota: 'Xólotl presenta rasgos caninos. El audio corresponde a un xoloitzcuintle contemporáneo y no representa la voz de la deidad.',
+        nota: 'Xólotl presenta rasgos caninos. El audio es de un xoloitzcuintle contemporáneo; no representa la voz de la deidad.',
       },
     ],
     simbolos: [
-      { id: 'canino', titulo: 'Rasgos caninos', texto: 'La asociación con Xólotl se basa en la iconografía publicada del códice, no en una identificación facial de personas.' },
-      { id: 'aztlan', titulo: 'Aztlán / origen', texto: 'No se coloca un pin definitivo. Cuando una región es discutida, el mapa muestra propuestas o un área aproximada.' },
+      {
+        id: 'canino',
+        titulo: 'Rasgos caninos',
+        texto: 'La asociación con Xólotl se basa en la iconografía publicada del códice.',
+      },
+      {
+        id: 'aztlan',
+        titulo: 'Procedencia y Aztlán',
+        texto: 'La procedencia exacta del códice es desconocida. Cuando una región es discutida, el mapa muestra propuestas, no un pin definitivo.',
+      },
     ],
     lugares: {
       resguardo: {
@@ -163,7 +185,7 @@ export const PIECES: PieceCard[] = [
       elaboracion: {
         etiqueta: 'Mesoamérica occidental / Mixteca-Puebla (propuestas)',
         certeza: 'propuestas_multiples',
-        nota: 'La región de elaboración es debatida. Se muestran áreas propuestas, no un punto único.',
+        nota: 'La región de elaboración es debatida.',
       },
       representado: {
         etiqueta: 'Aztlán (lugar representado; no localizado de forma unívoca)',
@@ -173,8 +195,8 @@ export const PIECES: PieceCard[] = [
     },
     fuentes: [
       {
-        titulo: 'Códice Fejérváry-Mayer (facsímil / ficha de demostración)',
-        procedencia: 'Paquete local · resguardo actual: World Museum, Liverpool',
+        titulo: 'Códice Fejérváry-Mayer',
+        procedencia: 'Resguardo actual: World Museum, Liverpool',
       },
     ],
     narracion: 'narrations/xolotl.wav',
@@ -214,13 +236,13 @@ export const MANIFEST: PackageManifest = {
 
 export const GLOSSARY: Record<string, string> = {
   cuauhxicalli: 'Recipiente ritual documentado en fuentes mexicas y en fichas museográficas.',
-  ocelotl: 'Jaguar. El término náhuatl se usa aquí según la ficha de la pieza.',
-  xolotl: 'Deidad asociada a rasgos caninos en la tradición pictórica; no se afirma una “voz” original.',
+  ocelotl: 'Jaguar. El término náhuatl se usa según la ficha de la pieza.',
+  xolotl: 'Deidad asociada a rasgos caninos en la tradición pictórica.',
 }
 
 export const LICENSES: Record<string, string> = {
   datos: 'Datos de demostración precargados para Mensajes Vivos. No sustituyen cédulas oficiales.',
-  audio_jaguar: 'Tono de referencia generado para la demostración. Clasificado como sonido natural de referencia (simulado).',
-  audio_xolo: 'Tono de referencia generado para la demostración. No es la voz de una deidad.',
-  audio_teponaztli: 'Tono de referencia. Categoría: réplica arqueomusical (simulación local).',
+  audio_jaguar: 'Tono de referencia. Clasificado como sonido natural de referencia.',
+  audio_xolo: 'Tono de referencia contemporáneo. No es la voz de una deidad.',
+  audio_teponaztli: 'Tono de referencia. Categoría: réplica arqueomusical.',
 }

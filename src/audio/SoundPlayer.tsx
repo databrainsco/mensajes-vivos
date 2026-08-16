@@ -37,11 +37,7 @@ export function SoundPlayer({
   }, [])
 
   if (!src) {
-    return (
-      <div className="player">
-        <p>No existe una grabación o reconstrucción suficientemente documentada para este instrumento.</p>
-      </div>
-    )
+    return null
   }
 
   return (
