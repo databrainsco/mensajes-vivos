@@ -171,7 +171,7 @@ export function CameraScreen() {
         : live
           ? live.descripcion_visible
           : modelReady
-            ? 'Solo se nombra una pieza con evidencia fuerte'
+            ? 'Catálogo mesoamericano · acerca la pieza'
             : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =

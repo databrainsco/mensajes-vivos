@@ -2,19 +2,12 @@ import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, ObjectType, 
 import { VISION_MODEL } from './modelCatalog'
 import { allClipLabels, isRejectLabel, pieceForClipLabel } from './labels'
 
+type Rank = { label: string; score: number }
+
 type Classifier = {
-  (
-    image: unknown,
-    labels: string[],
-    options?: { hypothesis_template?: string },
-  ): Promise<Array<{ label: string; score: number }>>
+  (image: unknown, labels: string[], options?: { hypothesis_template?: string }): Promise<Rank[]>
   dispose?: () => Promise<void>
 }
-
-/** Umbrales altos: CLIP siempre ordena etiquetas; sin margen se inventa. */
-const MIN_SCORE = 0.72
-const MIN_MARGIN = 0.12
-const CONFIRM_SCORE = 0.82
 
 async function toModelInput(image: ImageBitmap | ImageData | HTMLCanvasElement): Promise<unknown> {
   const { RawImage } = await import('@huggingface/transformers')
@@ -39,10 +32,67 @@ function unknownResult(score: number, reason: string): VisionResult {
     elementos: [],
     instrumentos: [],
     alternativas: [],
-    advertencias: [reason, 'No se inventa una identidad sin evidencia suficiente.'],
-    descripcion_visible: 'No puedo identificar una pieza del paquete local. Apunta a Coatlicue, Océlotl Cuauhxicalli o la lámina de Xólotl.',
+    advertencias: [reason],
+    descripcion_visible:
+      'No hay una coincidencia clara con el catálogo mesoamericano local. Acerca una escultura, relieve, códice, vasija o instrumento del acervo.',
     embedding: [score],
     simulation: false,
+  }
+}
+
+/**
+ * Con muchas etiquetas, CLIP reparte probabilidad: se compara pieza vs rechazo
+ * y el margen entre las mejores piezas, no un umbral absoluto alto.
+ */
+function decide(ranked: Rank[]) {
+  const pieces = ranked.filter((r) => !isRejectLabel(r.label))
+  const rejects = ranked.filter((r) => isRejectLabel(r.label))
+  const topPiece = pieces[0]
+  const secondPiece = pieces[1]
+  const topReject = rejects[0]
+
+  if (!topPiece) return { kind: 'unknown' as const, score: 0, reason: 'Sin candidatas del catálogo.' }
+
+  const score = topPiece.score
+  const rejectScore = topReject?.score ?? 0
+  const marginPieces = score - (secondPiece?.score ?? 0)
+  const marginReject = score - rejectScore
+
+  if (rejectScore >= score) {
+    return {
+      kind: 'unknown' as const,
+      score,
+      reason: 'La escena parece un objeto moderno, libro o pantalla, no una pieza del catálogo.',
+    }
+  }
+  if (marginReject < 0.04) {
+    return {
+      kind: 'unknown' as const,
+      score,
+      reason: 'No se distingue con claridad de una escena ajena al patrimonio.',
+    }
+  }
+  if (score < 0.12) {
+    return { kind: 'unknown' as const, score, reason: 'Confianza demasiado baja para proponer una ficha.' }
+  }
+  if (marginPieces < 0.03 && score < 0.22) {
+    return {
+      kind: 'unknown' as const,
+      score,
+      reason: 'Varias piezas del catálogo quedan empatadas; no se afirma una identidad.',
+    }
+  }
+
+  const piece = pieceForClipLabel(topPiece.label)
+  if (!piece) return { kind: 'unknown' as const, score, reason: 'Etiqueta sin ficha local.' }
+
+  const confirm = score >= 0.28 && marginPieces >= 0.06 && marginReject >= 0.08
+  return {
+    kind: 'match' as const,
+    piece,
+    score,
+    estado: confirm ? ('confirmada_por_paquete' as const) : ('identificacion_probable' as const),
+    alts: pieces.slice(1, 4),
   }
 }
 
@@ -92,24 +142,13 @@ export class ClipLocalVisionModel implements LocalVisionModel {
     const ranked = await this.classifier!(input, labels, {
       hypothesis_template: 'a photo of {}',
     })
-    const top = ranked[0]
-    const second = ranked[1]
-    const score = top?.score ?? 0
-    const margin = score - (second?.score ?? 0)
+    const decision = decide(ranked)
 
-    if (!top || isRejectLabel(top.label)) {
-      return unknownResult(score, 'La escena parece un libro, pantalla u objeto ajeno al paquete.')
+    if (decision.kind === 'unknown') {
+      return unknownResult(decision.score, decision.reason)
     }
 
-    const piece = pieceForClipLabel(top.label)
-    if (!piece || score < MIN_SCORE || margin < MIN_MARGIN) {
-      return unknownResult(
-        score,
-        `Confianza insuficiente (${Math.round(score * 100)}%, margen ${Math.round(margin * 100)}%).`,
-      )
-    }
-
-    const estado = score >= CONFIRM_SCORE && margin >= 0.18 ? 'confirmada_por_paquete' : 'identificacion_probable'
+    const { piece, score, estado, alts } = decision
     return {
       tipo_objeto: piece.tipo_objeto as ObjectType,
       identificacion: { nombre: piece.nombre, confianza: score, estado },
@@ -117,15 +156,15 @@ export class ClipLocalVisionModel implements LocalVisionModel {
       periodo: null,
       elementos: piece.elementos,
       instrumentos: [],
-      alternativas: ranked
-        .slice(1, 4)
-        .filter((r) => !isRejectLabel(r.label))
-        .map((r) => ({ nombre: pieceForClipLabel(r.label)?.nombre ?? r.label, confianza: r.score })),
+      alternativas: alts.map((r) => ({
+        nombre: pieceForClipLabel(r.label)?.nombre ?? r.label,
+        confianza: r.score,
+      })),
       advertencias:
         estado === 'identificacion_probable'
-          ? ['Identificación probable, no confirmada. Revisa la ficha antes de tomarla como hecho.']
-          : ['Identidad tomada de la ficha local tras coincidencia alta con CLIP.'],
-      descripcion_visible: `Escena compatible con ${piece.tipo_objeto}.`,
+          ? ['Identificación probable. Revisa la ficha antes de aceptarla como certeza.']
+          : [],
+      descripcion_visible: `${piece.tipo_objeto} · ${piece.cultura}`,
       indoor_cues: { sala: piece.sala, inventario: piece.inventario },
       embedding: [score],
       simulation: false,

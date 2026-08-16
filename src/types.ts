@@ -90,6 +90,8 @@ export interface PieceCard {
   periodo: string
   tipo_objeto: ObjectType
   resumen: string
+  /** Descripción visual en inglés para CLIP (solo uso interno del modelo). */
+  clip_label: string
   sala: string
   inventario?: string
   elementos: VisualElement[]
