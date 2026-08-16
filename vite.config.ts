@@ -47,10 +47,24 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'cultural-packages' },
           },
+          {
+            urlPattern: /^https:\/\/huggingface\.co\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'hf-models' },
+          },
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'wasm-runtime' },
+          },
         ],
       },
     }),
   ],
+  optimizeDeps: {
+    exclude: ['onnxruntime-node'],
+  },
+  worker: { format: 'es' },
   test: {
     environment: 'jsdom',
     globals: true,

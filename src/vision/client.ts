@@ -41,11 +41,11 @@ export class VisionClient {
     return this.worker
   }
 
-  private call(type: string, payload?: unknown): Promise<Record<string, unknown>> {
+  private call(type: string, payload?: unknown, timeoutMs = 20000): Promise<Record<string, unknown>> {
     const id = ++this.seq
     const worker = this.ensure()
     return new Promise((resolve, reject) => {
-      const t = window.setTimeout(() => reject(new Error('timeout')), 20000)
+      const t = window.setTimeout(() => reject(new Error('timeout')), timeoutMs)
       this.pending.set(id, (v) => {
         window.clearTimeout(t)
         resolve(v as Record<string, unknown>)
@@ -54,8 +54,8 @@ export class VisionClient {
     })
   }
 
-  async load() {
-    await this.call('load')
+  async load(clip = false) {
+    await this.call('load', { clip }, clip ? 180000 : 20000)
   }
 
   async caps(): Promise<DeviceCapabilities> {
@@ -64,7 +64,7 @@ export class VisionClient {
   }
 
   async analyze(context: AnalyzeContext & { width: number; height: number; image?: ImageData }): Promise<VisionResult> {
-    const res = await this.call('analyze', context)
+    const res = await this.call('analyze', context, 45000)
     if (!res.ok) throw new Error(String(res.error ?? 'analyze failed'))
     return res.result as VisionResult
   }

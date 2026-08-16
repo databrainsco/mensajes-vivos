@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSession } from '../app/session'
 import { getPrivacy, setPrivacy } from '../packages/db'
-import { MNA_VENUE } from '../demo/packageData'
+import { MNA_VENUE, PIECES } from '../demo/packageData'
 import { classifyGeofence } from '../geo/geofence'
+import { getInstalledModel } from '../vision/modelDownload'
 import { downscaleCanvas, estimateBrightness, VisionClient } from '../vision/client'
 import type { VisionResult } from '../types'
 
@@ -21,6 +22,8 @@ export function CameraScreen() {
   const [live, setLive] = useState<VisionResult | null>(null)
   const [zone, setZone] = useState(false)
   const [camError, setCamError] = useState('')
+  const [modelReady, setModelReady] = useState(false)
+  const modelReadyRef = useRef(false)
 
   useEffect(() => {
     const st = loc.state as { dismiss?: string } | null
@@ -48,8 +51,12 @@ export function CameraScreen() {
           video.current.srcObject = stream
           await video.current.play()
         }
-        await client.current.load()
-        setStatus('Detectando en este dispositivo')
+        const installed = await getInstalledModel()
+        const ready = Boolean(installed?.ready)
+        setModelReady(ready)
+        modelReadyRef.current = ready
+        await client.current.load(ready)
+        setStatus(ready ? 'Detectando en este dispositivo' : 'Descarga el modelo en Guías')
         const stored = await getPrivacy()
         session.setPrivacy(stored)
         if (stored.locationEnabled && !stored.cameraOnly) {
@@ -91,6 +98,10 @@ export function CameraScreen() {
   async function tick() {
     const v = video.current
     if (!v || !v.videoWidth || busy.current || camError) return
+    if (!modelReadyRef.current) {
+      setStatus('Descarga el modelo en Guías para reconocer')
+      return
+    }
     if (performance.now() - lastMotion.current < 280) return
     const small = downscaleCanvas(v, 320)
     if (estimateBrightness(small) < 0.07) {
@@ -107,6 +118,7 @@ export function CameraScreen() {
       const vision = await client.current.analyze({
         image,
         packageId: session.activePackage?.id,
+        indoorCues: PIECES.map((p) => `${p.nombre}. ${p.tipo_objeto} de cultura ${p.cultura}`),
         width: small.width,
         height: small.height,
       })
@@ -179,12 +191,17 @@ export function CameraScreen() {
           className="detect-card"
           type="button"
           onClick={() => {
-            if (live) nav('/resultado')
+            if (!modelReady) nav('/modelo')
+            else if (live) nav('/resultado')
           }}
         >
-          <span className="kicker">{scanning ? 'Escaneando la pieza' : 'Reconocimiento'}</span>
-          <strong>{label ?? 'Apunta hacia la pieza'}</strong>
-          <span className="tiny">{hint}</span>
+          <span className="kicker">{scanning ? 'Escaneando la pieza' : modelReady ? 'Reconocimiento' : 'Sin modelo'}</span>
+          <strong>
+            {modelReady ? (label ?? 'Apunta hacia la pieza') : 'Descarga el modelo local'}
+          </strong>
+          <span className="tiny">
+            {modelReady ? hint : 'En Guías puedes bajar CLIP (~92 MB). Las fotos no se envían.'}
+          </span>
           {live?.identificacion.confianza ? (
             <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza · toca para abrir la ficha</span>
           ) : null}

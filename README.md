@@ -2,7 +2,7 @@
 
 PWA móvil para descubrir patrimonio arqueológico de México con la cámara. Slogan: *Mira. Reconoce. Escucha el México antiguo.*
 
-Las imágenes se analizan **en el dispositivo**. No hay llamadas a APIs de visión en la nube. El adaptador actual es una **simulación local** claramente etiquetada.
+Las imágenes se analizan **en el dispositivo**. En **Guías** se descarga el modelo CLIP (~92 MB) una vez; las fotos no se envían.
 
 ## Requisitos
 
@@ -37,26 +37,9 @@ La app usa `HashRouter` y `base` `/mensajes-vivos/` para GitHub Pages.
 5. Resultado con confianza y estado: confirmada por paquete, probable o solo descripción visual.
 6. Mapas GeoJSON locales (sin teselas que filtren ubicación). Leyenda: usuario, resguardo, hallazgo, elaboración, lugar representado.
 
-## Sustituir la simulación por un modelo real
+## Modelo local
 
-Implementa la interfaz en `src/vision/LocalVisionModel.ts`:
-
-- `loadModel()`
-- `analyzeImage(image, context)`
-- `generateEmbedding(image)`
-- `releaseResources()`
-- `getDeviceCapabilities()`
-
-Pasos sugeridos:
-
-1. Elige un runtime **local**: ONNX Runtime Web (WASM + WebGPU) o Transformers.js con un VLM cuantizado pequeño.
-2. Crea `src/vision/OnnxLocalVisionModel.ts` (o similar) que cumpla la interfaz.
-3. En `getLocalVisionModel()` y en `src/vision/vision.worker.ts`, instancia el runtime real si `getDeviceCapabilities()` indica WebGPU o WASM suficiente; si no, usa el modelo pequeño.
-4. `analyzeImage` debe devolver **solo lo visible** (tipo de objeto, elementos, candidatos). Cultura, fechas, sonidos y lugares salen de las fichas del paquete (`pieces.json`), nunca de la memoria libre del modelo.
-5. No presentas inferencias como hechos. Conserva `simulation: false` únicamente cuando el peso del modelo esté cargado de verdad.
-6. Reduce la imagen (véase `downscaleCanvas`) antes de inferir. Un análisis a la vez. Llama `releaseResources()` al cerrar la cámara.
-
-El modo demo debe seguir existiendo como respaldo y permanecer etiquetado **Simulación local**.
+En **Guías** descarga CLIP (`Xenova/clip-vit-base-patch32`, cuantizado). Los pesos se cachean en el navegador. El modelo solo ordena coincidencias; cultura y fechas salen de las fichas del paquete.
 
 ## Versionamiento y despliegue
 
