@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSession } from '../app/session'
 import { getPrivacy, setPrivacy } from '../packages/db'
-import { MNA_VENUE, PIECES } from '../demo/packageData'
+import { MNA_VENUE } from '../demo/packageData'
 import { classifyGeofence } from '../geo/geofence'
 import { getInstalledModel } from '../vision/modelDownload'
 import { downscaleCanvas, estimateBrightness, VisionClient } from '../vision/client'
@@ -15,7 +15,7 @@ export function CameraScreen() {
   const video = useRef<HTMLVideoElement>(null)
   const client = useRef(new VisionClient())
   const busy = useRef(false)
-  const lastMotion = useRef(0)
+  const readyRef = useRef(false)
   const [status, setStatus] = useState('Iniciando cámara…')
   const [torch, setTorch] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -23,7 +23,7 @@ export function CameraScreen() {
   const [zone, setZone] = useState(false)
   const [camError, setCamError] = useState('')
   const [modelReady, setModelReady] = useState(false)
-  const modelReadyRef = useRef(false)
+  const [usingClip, setUsingClip] = useState(false)
 
   useEffect(() => {
     const st = loc.state as { dismiss?: string } | null
@@ -37,10 +37,12 @@ export function CameraScreen() {
   useEffect(() => {
     let stream: MediaStream | null = null
     let cancelled = false
+    readyRef.current = false
+
     void (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         })
         if (cancelled) {
@@ -51,12 +53,25 @@ export function CameraScreen() {
           video.current.srcObject = stream
           await video.current.play()
         }
+        setStatus('Cargando reconocimiento…')
+
         const installed = await getInstalledModel()
-        const ready = Boolean(installed?.ready)
-        setModelReady(ready)
-        modelReadyRef.current = ready
-        await client.current.load(ready)
-        setStatus(ready ? 'Detectando en este dispositivo' : 'Descarga el modelo en Guías')
+        const wantClip = Boolean(installed?.ready)
+        setModelReady(wantClip)
+
+        const loaded = await client.current.load(wantClip)
+        if (cancelled) return
+        setUsingClip(loaded.clip)
+        readyRef.current = true
+
+        if (wantClip && loaded.clip) {
+          setStatus('Detectando con modelo local')
+        } else if (wantClip && !loaded.clip) {
+          setStatus('Modelo no cargó; modo local básico')
+        } else {
+          setStatus('Modo local básico · descarga CLIP en Guías')
+        }
+
         const stored = await getPrivacy()
         session.setPrivacy(stored)
         if (stored.locationEnabled && !stored.cameraOnly) {
@@ -71,18 +86,15 @@ export function CameraScreen() {
             { enableHighAccuracy: true, timeout: 6000 },
           )
         }
-      } catch {
+      } catch (error) {
         setCamError('Activa la cámara en Ajustes para reconocer piezas.')
-        setStatus('Sin cámara')
+        setStatus(`Sin cámara (${String(error).slice(0, 80)})`)
       }
     })()
-    const onDev = () => {
-      lastMotion.current = performance.now()
-    }
-    window.addEventListener('devicemotion', onDev)
+
     return () => {
       cancelled = true
-      window.removeEventListener('devicemotion', onDev)
+      readyRef.current = false
       stream?.getTracks().forEach((t) => t.stop())
       void client.current.release()
     }
@@ -91,43 +103,50 @@ export function CameraScreen() {
   useEffect(() => {
     const id = window.setInterval(() => {
       void tick()
-    }, 900)
+    }, 1600)
     return () => window.clearInterval(id)
   }, [])
 
   async function tick() {
     const v = video.current
-    if (!v || !v.videoWidth || busy.current || camError) return
-    if (!modelReadyRef.current) {
-      setStatus('Descarga el modelo en Guías para reconocer')
-      return
-    }
-    if (performance.now() - lastMotion.current < 280) return
-    const small = downscaleCanvas(v, 320)
-    if (estimateBrightness(small) < 0.07) {
+    if (!v || !v.videoWidth || busy.current || camError || !readyRef.current) return
+
+    const small = downscaleCanvas(v, 256)
+    if (estimateBrightness(small) < 0.05) {
       setStatus('Busca más luz')
       return
     }
-    const ctx = small.getContext('2d')
+    const ctx = small.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
     const image = ctx.getImageData(0, 0, small.width, small.height)
+
     busy.current = true
     setScanning(true)
-    setStatus('Reconociendo…')
+    setStatus(usingClip ? 'Reconociendo con CLIP…' : 'Reconociendo…')
     try {
       const vision = await client.current.analyze({
         image,
         packageId: session.activePackage?.id,
-        indoorCues: PIECES.map((p) => `${p.nombre}. ${p.tipo_objeto} de cultura ${p.cultura}`),
         width: small.width,
         height: small.height,
       })
       session.setVision(vision)
-      session.setCapture(small.toDataURL('image/jpeg', 0.65))
+      session.setCapture(small.toDataURL('image/jpeg', 0.7))
       setLive(vision)
-      setStatus('Detectando en este dispositivo')
-    } catch {
-      setStatus('Esperando escena estable')
+      if (vision.identificacion.nombre) {
+        setStatus(
+          vision.identificacion.estado === 'confirmada_por_paquete'
+            ? `Coincide: ${vision.identificacion.nombre}`
+            : `Posible: ${vision.identificacion.nombre}`,
+        )
+        if (session.privacy.vibrateOnMatch && vision.identificacion.estado === 'confirmada_por_paquete') {
+          navigator.vibrate?.(30)
+        }
+      } else {
+        setStatus(usingClip ? 'Sin coincidencia · acerca la pieza' : 'Sin coincidencia · descarga CLIP en Guías')
+      }
+    } catch (error) {
+      setStatus(`Error al analizar: ${String(error).slice(0, 60)}`)
     } finally {
       busy.current = false
       setScanning(false)
@@ -146,12 +165,14 @@ export function CameraScreen() {
   const label = live?.identificacion.nombre
   const hint =
     live?.identificacion.estado === 'confirmada_por_paquete'
-      ? 'Coincidencia con ficha local'
+      ? 'Coincidencia con ficha local · toca para abrir'
       : live?.identificacion.estado === 'identificacion_probable'
-        ? 'Identificación probable'
+        ? 'Identificación probable · toca para abrir'
         : live
           ? live.descripcion_visible
-          : 'Apunta a una escultura, códice o relieve'
+          : modelReady
+            ? 'Apunta a Coatlicue, Océlotl o un códice'
+            : 'Sin CLIP: reconocimiento básico. Descárgalo en Guías.'
 
   return (
     <div className="camera-root">
@@ -161,6 +182,7 @@ export function CameraScreen() {
           <div>
             <strong>Mensajes Vivos</strong>
             <p className="tiny">{status}</p>
+            <p className="tiny">{usingClip ? 'CLIP en este dispositivo' : 'Respaldo local'}</p>
           </div>
           <div className="hud-actions">
             <button className="icon-btn" type="button" aria-label="Antorcha" onClick={() => void toggleTorch()}>
@@ -191,19 +213,15 @@ export function CameraScreen() {
           className="detect-card"
           type="button"
           onClick={() => {
-            if (!modelReady) nav('/modelo')
-            else if (live) nav('/resultado')
+            if (live?.identificacion.nombre) nav('/resultado')
+            else if (!modelReady) nav('/modelo')
           }}
         >
-          <span className="kicker">{scanning ? 'Escaneando la pieza' : modelReady ? 'Reconocimiento' : 'Sin modelo'}</span>
-          <strong>
-            {modelReady ? (label ?? 'Apunta hacia la pieza') : 'Descarga el modelo local'}
-          </strong>
-          <span className="tiny">
-            {modelReady ? hint : 'En Guías puedes bajar CLIP (~92 MB). Las fotos no se envían.'}
-          </span>
+          <span className="kicker">{scanning ? 'Escaneando' : label ? 'Detectado' : 'En vivo'}</span>
+          <strong>{label ?? (modelReady ? 'Buscando coincidencia…' : 'Descarga el modelo CLIP')}</strong>
+          <span className="tiny">{hint}</span>
           {live?.identificacion.confianza ? (
-            <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza · toca para abrir la ficha</span>
+            <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza</span>
           ) : null}
         </button>
       </div>

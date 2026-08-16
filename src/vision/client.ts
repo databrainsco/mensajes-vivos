@@ -3,7 +3,7 @@ import type { AnalyzeContext, DeviceCapabilities, VisionResult } from '../types'
 export function downscaleCanvas(source: HTMLCanvasElement | HTMLVideoElement, max = 384): HTMLCanvasElement {
   const w = 'videoWidth' in source ? source.videoWidth : source.width
   const h = 'videoHeight' in source ? source.videoHeight : source.height
-  const scale = Math.min(1, max / Math.max(w, h))
+  const scale = Math.min(1, max / Math.max(w, h || 1))
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(w * scale))
   canvas.height = Math.max(1, Math.round(h * scale))
@@ -30,18 +30,24 @@ export class VisionClient {
     if (!this.worker) {
       this.worker = new Worker(new URL('./vision.worker.ts', import.meta.url), { type: 'module' })
       this.worker.onmessage = (ev: MessageEvent) => {
-        const { id } = ev.data
+        const { id } = ev.data as { id: number }
         const fn = this.pending.get(id)
         if (fn) {
           this.pending.delete(id)
           fn(ev.data)
         }
       }
+      this.worker.onerror = (err) => {
+        for (const [id, fn] of this.pending) {
+          this.pending.delete(id)
+          fn({ id, ok: false, error: err.message || 'worker error' })
+        }
+      }
     }
     return this.worker
   }
 
-  private call(type: string, payload?: unknown, timeoutMs = 20000): Promise<Record<string, unknown>> {
+  private call(type: string, payload?: unknown, timeoutMs = 20000, transfer?: Transferable[]): Promise<Record<string, unknown>> {
     const id = ++this.seq
     const worker = this.ensure()
     return new Promise((resolve, reject) => {
@@ -50,12 +56,17 @@ export class VisionClient {
         window.clearTimeout(t)
         resolve(v as Record<string, unknown>)
       })
-      worker.postMessage({ id, type, payload })
+      worker.postMessage({ id, type, payload }, transfer ?? [])
     })
   }
 
   async load(clip = false) {
-    await this.call('load', { clip }, clip ? 180000 : 20000)
+    const res = await this.call('load', { clip }, clip ? 240000 : 20000)
+    if (!res.ok) throw new Error(String(res.error ?? 'load failed'))
+    return {
+      clip: Boolean(res.clip),
+      clipLoadError: res.clipLoadError ? String(res.clipLoadError) : null,
+    }
   }
 
   async caps(): Promise<DeviceCapabilities> {
@@ -64,13 +75,19 @@ export class VisionClient {
   }
 
   async analyze(context: AnalyzeContext & { width: number; height: number; image?: ImageData }): Promise<VisionResult> {
-    const res = await this.call('analyze', context, 45000)
+    const transfer: Transferable[] = []
+    if (context.image?.data?.buffer) transfer.push(context.image.data.buffer)
+    const res = await this.call('analyze', context, 60000, transfer)
     if (!res.ok) throw new Error(String(res.error ?? 'analyze failed'))
     return res.result as VisionResult
   }
 
   async release() {
-    await this.call('release')
+    try {
+      await this.call('release', undefined, 5000)
+    } catch {
+      // ignore
+    }
     this.worker?.terminate()
     this.worker = null
   }

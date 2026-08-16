@@ -1,15 +1,28 @@
 import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, ObjectType, VisionResult } from '../types'
-import { PIECES } from '../demo/packageData'
 import { VISION_MODEL } from './modelCatalog'
+import { pieceForClipLabel, pieceLabels } from './labels'
 
 type Classifier = {
-  (image: ImageData, options: { candidate_labels: string[] }): Promise<Array<{ label: string; score: number }>>
+  (
+    image: unknown,
+    labels: string[],
+    options?: { hypothesis_template?: string },
+  ): Promise<Array<{ label: string; score: number }>>
   dispose?: () => Promise<void>
 }
 
-function asImageData(image: ImageBitmap | ImageData | HTMLCanvasElement): ImageData {
-  if (typeof ImageData !== 'undefined' && image instanceof ImageData) return image
-  throw new Error('Se requiere ImageData para el modelo CLIP')
+async function toModelInput(image: ImageBitmap | ImageData | HTMLCanvasElement): Promise<unknown> {
+  const { RawImage } = await import('@huggingface/transformers')
+  if (typeof ImageData !== 'undefined' && image instanceof ImageData) {
+    return new RawImage(image.data, image.width, image.height, 4)
+  }
+  if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) {
+    const ctx = image.getContext('2d')
+    if (!ctx) throw new Error('canvas sin contexto')
+    const data = ctx.getImageData(0, 0, image.width, image.height)
+    return new RawImage(data.data, data.width, data.height, 4)
+  }
+  throw new Error('Formato de imagen no soportado para CLIP')
 }
 
 export class ClipLocalVisionModel implements LocalVisionModel {
@@ -21,6 +34,11 @@ export class ClipLocalVisionModel implements LocalVisionModel {
     const { pipeline, env } = await import('@huggingface/transformers')
     env.useBrowserCache = true
     env.allowLocalModels = false
+    try {
+      if (env.backends?.onnx?.wasm) env.backends.onnx.wasm.proxy = false
+    } catch {
+      // ignore
+    }
     this.classifier = (await pipeline('zero-shot-image-classification', VISION_MODEL.hfId, {
       dtype: 'q8',
     })) as unknown as Classifier
@@ -38,25 +56,26 @@ export class ClipLocalVisionModel implements LocalVisionModel {
   }
 
   async generateEmbedding(image: ImageBitmap | ImageData | HTMLCanvasElement): Promise<number[]> {
-    const data = asImageData(image)
-    return [data.width / 512, data.height / 512]
+    const w = 'width' in image ? image.width : 0
+    const h = 'height' in image ? image.height : 0
+    return [w / 512, h / 512]
   }
 
   async analyzeImage(
     image: ImageBitmap | ImageData | HTMLCanvasElement,
-    context?: AnalyzeContext,
+    _context?: AnalyzeContext,
   ): Promise<VisionResult> {
     await this.loadModel()
-    const labels =
-      context?.indoorCues && context.indoorCues.length > 0
-        ? context.indoorCues
-        : PIECES.map((p) => `${p.nombre}. ${p.tipo_objeto} de cultura ${p.cultura}`)
-    const ranked = await this.classifier!(asImageData(image), { candidate_labels: labels })
+    const labels = pieceLabels()
+    const input = await toModelInput(image)
+    const ranked = await this.classifier!(input, labels, {
+      hypothesis_template: 'a photo of {}',
+    })
     const top = ranked[0]
-    const piece = PIECES.find((p) => top?.label.toLowerCase().includes(p.nombre.toLowerCase().slice(0, 8)))
+    const piece = top ? pieceForClipLabel(top.label) : null
     const score = top?.score ?? 0
 
-    if (!piece || score < 0.22) {
+    if (!piece || score < 0.18) {
       return {
         tipo_objeto: 'objeto_desconocido',
         identificacion: { nombre: null, confianza: score, estado: 'descripcion_visual' },
@@ -65,14 +84,14 @@ export class ClipLocalVisionModel implements LocalVisionModel {
         elementos: [],
         instrumentos: [],
         alternativas: ranked.slice(0, 3).map((r) => ({ nombre: r.label, confianza: r.score })),
-        advertencias: ['Modelo CLIP local. Sin coincidencia suficiente con las fichas del paquete.'],
-        descripcion_visible: 'Veo una escena, pero no hay una ficha local lo bastante cercana.',
+        advertencias: ['Modelo CLIP local. Sin coincidencia suficiente con las fichas.'],
+        descripcion_visible: 'Aún no hay una ficha local lo bastante cercana. Acerca la pieza y estabiliza el teléfono.',
         embedding: [score],
         simulation: false,
       }
     }
 
-    const estado = score >= 0.4 ? 'confirmada_por_paquete' : 'identificacion_probable'
+    const estado = score >= 0.35 ? 'confirmada_por_paquete' : 'identificacion_probable'
     return {
       tipo_objeto: piece.tipo_objeto as ObjectType,
       identificacion: { nombre: piece.nombre, confianza: score, estado },
@@ -81,7 +100,7 @@ export class ClipLocalVisionModel implements LocalVisionModel {
       elementos: piece.elementos,
       instrumentos: [],
       alternativas: ranked.slice(1, 3).map((r) => ({ nombre: r.label, confianza: r.score })),
-      advertencias: ['Identidad tomada de la ficha local. CLIP solo ordena coincidencias visuales en el teléfono.'],
+      advertencias: ['Identidad tomada de la ficha local. CLIP ordena coincidencias visuales en el teléfono.'],
       descripcion_visible: `Escena compatible con ${piece.tipo_objeto}.`,
       indoor_cues: { sala: piece.sala, inventario: piece.inventario },
       embedding: [score],
