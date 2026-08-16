@@ -25,12 +25,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
       - run: npm test
       - run: npm run generate:audio
       - run: npm run build
         env:
           VITE_BASE: /mensajes-vivos/
           VITE_GIT_SHA: ${{ github.sha }}
+          ONNXRUNTIME_NODE_INSTALL: skip
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
