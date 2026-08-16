@@ -44,7 +44,7 @@ button, .btn {
 
 .screen {
   min-height: 100dvh;
-  padding: 1.25rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom));
+  padding: 1.25rem 1.1rem calc(2.6rem + env(safe-area-inset-bottom));
   max-width: 480px;
   margin: 0 auto;
 }
@@ -99,7 +99,7 @@ button, .btn {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: calc(0.8rem + env(safe-area-inset-top)) 0.9rem calc(1rem + env(safe-area-inset-bottom));
+  padding: calc(0.8rem + env(safe-area-inset-top)) 0.9rem calc(2.2rem + env(safe-area-inset-bottom));
   pointer-events: none;
 }
 .hud.live a, .hud.live button { pointer-events: auto; }
@@ -140,6 +140,21 @@ button, .btn {
   from { background-position: 0 -20%; }
   to { background-position: 0 120%; }
 }
+.version-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0.35rem 0.75rem calc(0.4rem + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--stone);
+  background: linear-gradient(to top, rgba(23, 21, 18, 0.92), transparent);
+  pointer-events: none;
+}
 .detect-card {
   pointer-events: auto;
   width: 100%;
@@ -151,6 +166,7 @@ button, .btn {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  margin-bottom: 1.6rem;
 }
 .zone-banner {
   pointer-events: auto;

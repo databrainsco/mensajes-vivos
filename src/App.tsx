@@ -14,6 +14,8 @@ import { PackagesScreen } from './screens/PackagesScreen'
 import { PrivacyScreen } from './screens/PrivacyScreen'
 import { ModelScreen } from './screens/ModelScreen'
 
+import { AppVersion } from './components/AppVersion'
+
 export default function App() {
   return (
     <SessionProvider>
@@ -37,6 +39,7 @@ export default function App() {
           <Route path="/modelo" element={<ModelScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AppVersion />
       </HashRouter>
     </SessionProvider>
   )

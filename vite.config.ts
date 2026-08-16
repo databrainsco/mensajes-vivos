@@ -1,11 +1,19 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+const sha = (process.env.VITE_GIT_SHA ?? process.env.GITHUB_SHA ?? '').slice(0, 7)
+const appVersion = sha ? `v${pkg.version} · ${sha}` : `v${pkg.version}`
 
 const base = process.env.VITE_BASE ?? '/mensajes-vivos/'
 
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [
     react(),
     VitePWA({

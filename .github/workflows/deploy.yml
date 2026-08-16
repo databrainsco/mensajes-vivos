@@ -30,6 +30,7 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /mensajes-vivos/
+          VITE_GIT_SHA: ${{ github.sha }}
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
