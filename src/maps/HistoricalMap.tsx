@@ -53,16 +53,37 @@ function kindLabel(kind: LocationKind) {
   return LABELS[kind]
 }
 
+function esc(text: string) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function popupHtml(kind: LocationKind, place: GeoPlace) {
+  const certeza =
+    place.certeza === 'exacta'
+      ? 'Punto documentado'
+      : place.certeza === 'aproximada'
+        ? 'Región aproximada'
+        : place.certeza === 'propuestas_multiples'
+          ? 'Varias propuestas'
+          : 'No confirmado'
+  const nota = place.nota ? `<p style="margin:0.35rem 0 0;font-size:0.85em;opacity:0.9">${esc(place.nota)}</p>` : ''
+  return `<strong>${kindLabel(kind)}</strong><br/>${esc(place.etiqueta)}<br/><span style="opacity:0.8">${certeza}</span>${nota}`
+}
+
 export function HistoricalMap({
   user,
   places,
   compact = false,
+  focusKind = null,
 }: {
   user?: { lng: number; lat: number } | null
   places: Array<{ kind: LocationKind; place: GeoPlace }>
   compact?: boolean
+  focusKind?: LocationKind | null
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const markersRef = useRef<Map<LocationKind, maplibregl.Marker>>(new Map())
 
   const userKey = user ? `${user.lng},${user.lat}` : ''
   const placeKey = places
@@ -83,25 +104,35 @@ export function HistoricalMap({
       zoom: compact ? 5.2 : 4.6,
       attributionControl: { compact: true },
     })
+    mapRef.current = map
+    markersRef.current = new Map()
 
-    const addDot = (lng: number, lat: number, kind: LocationKind, label: string) => {
-      const el = document.createElement('div')
+    const addDot = (lng: number, lat: number, kind: LocationKind, place: GeoPlace) => {
+      const el = document.createElement('button')
+      el.type = 'button'
       el.className = 'map-dot'
       el.style.background = COLORS[kind]
-      el.title = label
-      el.setAttribute('role', 'img')
-      el.setAttribute('aria-label', label)
-      new maplibregl.Marker({ element: el })
+      el.title = `${kindLabel(kind)}: ${place.etiqueta}`
+      el.setAttribute('aria-label', `${kindLabel(kind)}: ${place.etiqueta}`)
+      const marker = new maplibregl.Marker({ element: el })
         .setLngLat([lng, lat])
-        .setPopup(new maplibregl.Popup({ offset: 12 }).setText(label))
+        .setPopup(
+          new maplibregl.Popup({ offset: 14, maxWidth: '260px' }).setHTML(popupHtml(kind, place)),
+        )
         .addTo(map)
+      markersRef.current.set(kind, marker)
     }
 
     map.on('load', () => {
       map.resize()
-      if (user) addDot(user.lng, user.lat, 'usuario', 'Tu ubicación')
+      if (user) {
+        addDot(user.lng, user.lat, 'usuario', {
+          etiqueta: 'Tu ubicación',
+          certeza: 'aproximada',
+        })
+      }
       for (const { kind, place } of pts) {
-        addDot(place.coordinates[0], place.coordinates[1], kind, `${kindLabel(kind)}: ${place.etiqueta}`)
+        addDot(place.coordinates[0], place.coordinates[1], kind, place)
       }
 
       const res = pts.find((p) => p.kind === 'resguardo')
@@ -148,15 +179,63 @@ export function HistoricalMap({
       }
     })
 
-    return () => map.remove()
+    return () => {
+      map.remove()
+      mapRef.current = null
+      markersRef.current.clear()
+    }
   }, [userKey, placeKey, compact])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !focusKind) return
+    let cancelled = false
+
+    const run = () => {
+      if (cancelled) return
+      const marker = markersRef.current.get(focusKind)
+      if (!marker) return false
+      const { lng, lat } = marker.getLngLat()
+      map.flyTo({
+        center: [lng, lat],
+        zoom: Math.max(map.getZoom(), compact ? 11 : 12),
+        duration: 700,
+      })
+      for (const [kind, m] of markersRef.current) {
+        const popup = m.getPopup()
+        if (!popup) continue
+        if (kind === focusKind) popup.addTo(map)
+        else popup.remove()
+      }
+      return true
+    }
+
+    if (!run()) {
+      const onLoad = () => {
+        window.setTimeout(run, 0)
+      }
+      map.once('load', onLoad)
+      const t1 = window.setTimeout(run, 120)
+      const t2 = window.setTimeout(run, 450)
+      return () => {
+        cancelled = true
+        map.off('load', onLoad)
+        window.clearTimeout(t1)
+        window.clearTimeout(t2)
+      }
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [focusKind, placeKey, compact])
 
   const shown = compact
     ? (['resguardo', 'hallazgo'] as const)
     : (['resguardo', 'hallazgo', 'elaboracion', 'representado', 'usuario'] as const)
 
   return (
-    <div className={`map-wrap ${compact ? 'compact' : ''}`}>
+    <div id="ficha-mapa" className={`map-wrap ${compact ? 'compact' : ''}`}>
       <div
         ref={ref}
         className={`map-canvas ${compact ? 'mini' : ''}`}

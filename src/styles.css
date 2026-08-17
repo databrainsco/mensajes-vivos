@@ -282,15 +282,48 @@ button:disabled, .btn:disabled { opacity: 0.45; }
 .map-wrap.compact .legend { margin: 0.4rem 0 0; }
 .map-canvas { height: 280px; }
 .map-canvas.mini { height: 200px; }
-.map-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.25); }
+.map-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  padding: 0;
+  cursor: pointer;
+}
 .legend { list-style: none; padding: 0.5rem 0 0; margin: 0; font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; }
 .legend span {
   display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4rem;
 }
 .link-list { margin: 0; padding-left: 1.1rem; }
 .link-list a { color: var(--gold); }
-.place-block { padding-top: 0.35rem; border-top: 1px solid rgba(184, 153, 85, 0.25); }
+.place-block {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.15rem 0.5rem;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid rgba(184, 153, 85, 0.25);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.place-block.active {
+  background: rgba(184, 153, 85, 0.12);
+  border-radius: 10px;
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+  box-shadow: inset 0 0 0 1px rgba(184, 153, 85, 0.45);
+}
+.place-block.disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
 .place-block p { margin: 0.2rem 0; }
+.place-block h2 { margin: 0 0 0.2rem; font-size: 1.05rem; }
 .card ul { margin: 0; padding-left: 1.1rem; }
 .warn { color: var(--cinnabar); font-size: 0.9rem; }
 .captions { background: #221e1a; padding: 0.6rem; border-radius: 10px; }

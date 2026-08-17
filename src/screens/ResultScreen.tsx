@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { speak } from '../audio/SoundPlayer'
 import { useSession } from '../app/session'
 import { PIECES } from '../demo/packageData'
 import { saveDiscovery } from '../packages/db'
 import { cardForVision } from './AnalysisScreen'
 import { HistoricalMap } from '../maps/HistoricalMap'
-import type { GeoPlace, VerificationState } from '../types'
+import type { GeoPlace, LocationKind, VerificationState } from '../types'
 
 const STATE_COPY: Record<VerificationState, string> = {
   confirmada_por_paquete: 'Confirmada por ficha local',
@@ -20,13 +21,40 @@ function certezaCopy(c: GeoPlace['certeza']) {
   return 'No confirmado'
 }
 
-function PlaceBlock({ title, place }: { title: string; place: GeoPlace }) {
+function PlaceBlock({
+  title,
+  place,
+  kind,
+  active,
+  onSelect,
+}: {
+  title: string
+  place: GeoPlace
+  kind: LocationKind
+  active: boolean
+  onSelect: (kind: LocationKind) => void
+}) {
+  const hasPoint = Boolean(place.coordinates)
   return (
-    <div className="place-block">
-      <p className="meta">{title} · {certezaCopy(place.certeza)}</p>
-      <p><strong>{place.etiqueta}</strong></p>
+    <button
+      type="button"
+      className={`place-block ${active ? 'active' : ''} ${hasPoint ? '' : 'disabled'}`}
+      disabled={!hasPoint}
+      onClick={() => {
+        if (!hasPoint) return
+        onSelect(kind)
+        document.getElementById('ficha-mapa')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }}
+    >
+      <p className="meta">
+        {title} · {certezaCopy(place.certeza)}
+        {hasPoint ? ' · Toca para ver en el mapa' : ' · Sin punto en el mapa'}
+      </p>
+      <p>
+        <strong>{place.etiqueta}</strong>
+      </p>
       {place.nota && <p>{place.nota}</p>}
-    </div>
+    </button>
   )
 }
 
@@ -38,6 +66,7 @@ export function ResultScreen() {
   const hasAnimals = Boolean(card && card.animales.length > 0)
   const hasInstruments = Boolean(card && card.instrumentos.length > 0)
   const hasSound = hasAnimals || hasInstruments
+  const [focusKind, setFocusKind] = useState<LocationKind | null>(null)
 
   if (!vision) {
     return (
@@ -91,16 +120,35 @@ export function ResultScreen() {
 
       <section className="card">
         <h2>Lugares</h2>
-        <p className="meta">Línea del hallazgo al resguardo. Toca los puntos para leer la etiqueta.</p>
+        <p className="meta">Toca un lugar de la lista o un punto del mapa para ver su ubicación.</p>
         <HistoricalMap
           compact
+          focusKind={focusKind}
           user={session.coords ? { lng: session.coords.lng, lat: session.coords.lat } : null}
           places={places}
         />
-        <PlaceBlock title="Dónde se resguarda" place={card.lugares.resguardo} />
-        <PlaceBlock title="Dónde se encontró" place={card.lugares.hallazgo} />
+        <PlaceBlock
+          title="Dónde se resguarda"
+          place={card.lugares.resguardo}
+          kind="resguardo"
+          active={focusKind === 'resguardo'}
+          onSelect={setFocusKind}
+        />
+        <PlaceBlock
+          title="Dónde se encontró"
+          place={card.lugares.hallazgo}
+          kind="hallazgo"
+          active={focusKind === 'hallazgo'}
+          onSelect={setFocusKind}
+        />
         {card.lugares.elaboracion && (
-          <PlaceBlock title="Dónde se elaboró" place={card.lugares.elaboracion} />
+          <PlaceBlock
+            title="Dónde se elaboró"
+            place={card.lugares.elaboracion}
+            kind="elaboracion"
+            active={focusKind === 'elaboracion'}
+            onSelect={setFocusKind}
+          />
         )}
         <Link className="btn secondary row" to="/mapa">Abrir mapa amplio</Link>
       </section>
