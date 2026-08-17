@@ -171,7 +171,7 @@ export function CameraScreen() {
         : live
           ? live.descripcion_visible
           : modelReady
-            ? 'Catálogo mesoamericano · acerca la pieza'
+            ? 'Dioses · glifos · códices · esculturas'
             : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =
