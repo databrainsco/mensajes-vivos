@@ -1,0 +1,23 @@
+[
+  { "pieceId": "coatlicue", "file": "coatlicue.jpg", "commons": "Coatlicue.jpg", "credit": "Wikimedia Commons · Coatlicue" },
+  { "pieceId": "piedra-del-sol", "file": "piedra-del-sol.jpg", "commons": "Monolito de la Piedra del Sol.jpg", "credit": "Wikimedia Commons · Piedra del Sol" },
+  { "pieceId": "coyolxauhqui", "file": "coyolxauhqui.jpg", "commons": "Coyolxauhqui stone.jpg", "credit": "Wikimedia Commons · Coyolxauhqui" },
+  { "pieceId": "ocelotl-cuauhxicalli", "file": "ocelotl.jpg", "commons": "MA D099 Quauhxiicalli container in the shape of an ocelot.jpg", "credit": "Wikimedia Commons · Océlotl Cuauhxicalli" },
+  { "pieceId": "tlaloc-monolito", "file": "tlaloc.jpg", "commons": "Monolito de Tláloc, Museo Nacional de Antropología.jpg", "credit": "Wikimedia Commons · Tláloc" },
+  { "pieceId": "cabeza-olmeca", "file": "cabeza-olmeca.jpg", "commons": "Olmec Colossal Head, San Lorenzo, Veracruz, 1200-600 BC.jpg", "credit": "Wikimedia Commons · Cabeza olmeca" },
+  { "pieceId": "atlantes-tula", "file": "atlantes-tula.jpg", "commons": "Atlantes de Tula Hidalgo.jpg", "credit": "Wikimedia Commons · Atlantes de Tula" },
+  { "pieceId": "chacmool", "file": "chacmool.jpg", "commons": "Chacmool - Chichen Itza 2024.jpg", "credit": "Wikimedia Commons · Chacmool" },
+  { "pieceId": "pakal-tapa", "file": "pakal.jpg", "commons": "Pacal the Great tomb lid.svg", "credit": "Wikimedia Commons · Lápida de Pakal" },
+  { "pieceId": "xochipilli", "file": "xochipilli.jpg", "commons": "Xochipilli.jpg", "credit": "Wikimedia Commons · Xochipilli" },
+  { "pieceId": "huehueteotl", "file": "huehueteotl.jpg", "commons": "Huehueteotl.jpg", "credit": "Wikimedia Commons · Huehuetéotl" },
+  { "pieceId": "castillo-chichen", "file": "castillo-chichen.jpg", "commons": "El Castillo, Chichen Itza.jpg", "credit": "Wikimedia Commons · El Castillo" },
+  { "pieceId": "templo-mayor", "file": "templo-mayor.jpg", "commons": "Main Pyramid - Templo Mayor - Mexico 2024.jpg", "credit": "Wikimedia Commons · Templo Mayor" },
+  { "pieceId": "mascara-teotihuacan", "file": "mascara-teotihuacan.jpg", "commons": "Teotihuacan mask 803.jpg", "credit": "Wikimedia Commons · Máscara teotihuacana" },
+  { "pieceId": "serpiente-emplumada", "file": "serpiente-emplumada.jpg", "commons": "Temple of Feathered Serpent view from top of Adosada platform Teotihuacan.jpg", "credit": "Wikimedia Commons · Serpiente emplumada" },
+  { "pieceId": "codice-mendoza", "file": "codice-mendoza.jpg", "commons": "Codex Mendoza folio 2r.jpg", "credit": "Wikimedia Commons · Códice Mendoza" },
+  { "pieceId": "codice-borbonico", "file": "codice-borbonico.jpg", "commons": "Codex Borbonicus.jpg", "credit": "Wikimedia Commons · Códice Borbónico" },
+  { "pieceId": "dintel-yaxchilan", "file": "dintel-yaxchilan.jpg", "commons": "Yaxchilan Lintel 24.jpg", "credit": "Wikimedia Commons · Dintel 24 de Yaxchilán" },
+  { "pieceId": "teponaztli", "file": "teponaztli.jpg", "commons": "Teponaztli.jpg", "credit": "Wikimedia Commons · Teponaztli" },
+  { "pieceId": "metate", "file": "metate.jpg", "commons": "Metate.jpg", "credit": "Wikimedia Commons · Metate" },
+  { "pieceId": "tzompantli", "file": "tzompantli.jpg", "commons": "Tzompantli.jpg", "credit": "Wikimedia Commons · Tzompantli" }
+]

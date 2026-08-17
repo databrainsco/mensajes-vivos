@@ -204,7 +204,7 @@ export function CameraScreen() {
           : live
             ? live.descripcion_visible
             : modelReady
-              ? 'Culturas de México · acerca y espera dos lecturas iguales'
+              ? 'Índice de museo local · acerca la pieza'
               : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =

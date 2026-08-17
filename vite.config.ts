@@ -53,7 +53,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,svg,woff2,webmanifest}'],
+        globPatterns: ['**/*.{js,css,svg,jpg,jpeg,png,webp,woff2,webmanifest}'],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

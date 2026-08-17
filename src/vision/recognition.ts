@@ -343,6 +343,7 @@ export function pieceResult(
   piece: PieceCard,
   score: number,
   alts: Rank[],
+  source: 'photo' | 'text' = 'text',
 ): VisionResult {
   return {
     tipo_objeto: piece.tipo_objeto,
@@ -356,10 +357,13 @@ export function pieceResult(
     elementos: piece.elementos,
     instrumentos: [],
     alternativas: alts.map((r) => ({
-      nombre: PIECES.find((p) => p.clip_label === r.label)?.nombre ?? r.label,
+      nombre: PIECES.find((p) => p.clip_label === r.label || p.id === r.label)?.nombre ?? r.label,
       confianza: r.score,
     })),
-    advertencias: ['Identificación probable. Revisa la ficha antes de aceptarla como certeza.'],
+    advertencias:
+      source === 'photo'
+        ? ['Coincidencia con foto de referencia local. Las fotos no salen del teléfono.']
+        : ['Identificación probable. Revisa la ficha antes de aceptarla como certeza.'],
     descripcion_visible: `${piece.tipo_objeto} · ${piece.cultura}`,
     indoor_cues: { sala: piece.sala, inventario: piece.inventario },
     embedding: [score],

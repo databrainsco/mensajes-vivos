@@ -12,6 +12,8 @@ import {
   unknownResult,
   type Rank,
 } from '../src/vision/recognition'
+import { MUSEUM_PHOTOS } from '../src/demo/visualIndex'
+import { decidePhotoIndex, l2Normalize, rankPhotoIndex } from '../src/vision/photoIndex'
 import { deletePackage, getPackage, savePackage } from '../src/packages/db'
 import { createVenueMaps } from '../src/packages/catalog'
 import type { InstalledPackage } from '../src/types'
@@ -73,6 +75,7 @@ describe('audio e incertidumbre', () => {
     const ids = new Set(PIECES.map((p) => p.id))
     expect(ids.size).toBe(PIECES.length)
     const labels = new Set(PIECES.map((p) => p.clip_label))
+    expect(labels.size).toBe(PIECES.length)
     expect(byId('coatlicue').historia.length).toBeGreaterThan(80)
     expect(byId('coatlicue').curiosidades.length).toBeGreaterThan(0)
     expect(byId('coatlicue').enlaces.some((e) => e.url.startsWith('http'))).toBe(true)
@@ -148,6 +151,33 @@ describe('adaptador demo', () => {
     expect(result.simulation).toBe(true)
     expect(result.identificacion.nombre).toBeNull()
     await model.releaseResources()
+  })
+})
+
+describe('índice fotográfico local', () => {
+  it('apunta a piezas reales del catálogo', () => {
+    expect(MUSEUM_PHOTOS.length).toBeGreaterThanOrEqual(18)
+    expect(MUSEUM_PHOTOS.every((p) => PIECES.some((piece) => piece.id === p.pieceId))).toBe(true)
+  })
+
+  it('elige la foto más parecida y no nombra si hay empate', () => {
+    const coatlicue = l2Normalize(Array.from({ length: 8 }, (_, i) => (i === 0 ? 1 : 0.01)))
+    const other = l2Normalize(Array.from({ length: 8 }, (_, i) => (i === 1 ? 1 : 0.01)))
+    const query = coatlicue
+    const ranked = rankPhotoIndex(query, [
+      { pieceId: 'coatlicue', embedding: coatlicue },
+      { pieceId: 'ocelotl-cuauhxicalli', embedding: other },
+    ])
+    expect(ranked[0].pieceId).toBe('coatlicue')
+    const hit = decidePhotoIndex(ranked)
+    expect(hit.kind).toBe('piece')
+    if (hit.kind === 'piece') expect(hit.piece.id).toBe('coatlicue')
+
+    const tied = decidePhotoIndex([
+      { pieceId: 'coatlicue', score: 0.73 },
+      { pieceId: 'xochipilli', score: 0.72 },
+    ])
+    expect(tied.kind).toBe('none')
   })
 })
 

@@ -1348,7 +1348,7 @@ export const MANIFEST: PackageManifest = {
   venueId: 'mna',
   venueName: 'Museo Nacional de Antropología',
   roomName: 'Culturas de México',
-  checksum: 'demo-sha256-mexico-v3',
+  checksum: 'demo-sha256-mexico-v4',
   signature: 'demo-unsigned-local-package',
   demo: true,
   stats: { piezas: PIECES.length, audios: 18, mapa: true },
@@ -1391,4 +1391,5 @@ export const LICENSES: Record<string, string> = {
   audio_jaguar: 'Sonido natural de referencia.',
   audio_xolo: 'Referencia contemporánea. No es la voz de una deidad.',
   audio_teponaztli: 'Réplica arqueomusical de referencia.',
+  fotos_indice: 'Fotos de referencia de Wikimedia Commons, usadas solo en el dispositivo para comparar. Crédito en cada archivo del índice.',
 }
