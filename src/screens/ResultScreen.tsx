@@ -39,7 +39,7 @@ export function ResultScreen() {
       <main className="screen stack">
         <p className="kicker">Resultado</p>
         <h1>Pieza no identificada</h1>
-        <p>No hay ficha local suficiente. No se inventa una identidad.</p>
+        <p>No hay ficha concreta todavía. No se abre una pieza de catálogo al azar.</p>
         <p>{vision.descripcion_visible}</p>
         <Link className="btn primary row" to="/camara">Seguir explorando</Link>
       </main>

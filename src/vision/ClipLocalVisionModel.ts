@@ -1,8 +1,15 @@
-import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, ObjectType, VisionResult } from '../types'
+import type { AnalyzeContext, DeviceCapabilities, LocalVisionModel, VisionResult } from '../types'
 import { VISION_MODEL } from './modelCatalog'
-import { allClipLabels, isRejectLabel, pieceForClipLabel } from './labels'
-
-type Rank = { label: string; score: number }
+import {
+  decideFamily,
+  decidePiece,
+  familyAndRejectLabels,
+  familyResult,
+  pieceResult,
+  piecesInFamily,
+  unknownResult,
+  type Rank,
+} from './recognition'
 
 type Classifier = {
   (image: unknown, labels: string[], options?: { hypothesis_template?: string }): Promise<Rank[]>
@@ -21,80 +28,6 @@ async function toModelInput(image: ImageBitmap | ImageData | HTMLCanvasElement):
     return new RawImage(data.data, data.width, data.height, 4)
   }
   throw new Error('Formato de imagen no soportado para CLIP')
-}
-
-function unknownResult(score: number, reason: string): VisionResult {
-  return {
-    tipo_objeto: 'objeto_desconocido',
-    identificacion: { nombre: null, confianza: score, estado: 'descripcion_visual' },
-    cultura: null,
-    periodo: null,
-    elementos: [],
-    instrumentos: [],
-    alternativas: [],
-    advertencias: [reason],
-    descripcion_visible:
-      'No hay una coincidencia clara con el catálogo de culturas de México. Acerca una escultura, relieve, códice, glifo, vasija o instrumento del acervo.',
-    embedding: [score],
-    simulation: false,
-  }
-}
-
-/**
- * Con muchas etiquetas, CLIP reparte probabilidad: se compara pieza vs rechazo
- * y el margen entre las mejores piezas, no un umbral absoluto alto.
- */
-function decide(ranked: Rank[]) {
-  const pieces = ranked.filter((r) => !isRejectLabel(r.label))
-  const rejects = ranked.filter((r) => isRejectLabel(r.label))
-  const topPiece = pieces[0]
-  const secondPiece = pieces[1]
-  const topReject = rejects[0]
-
-  if (!topPiece) return { kind: 'unknown' as const, score: 0, reason: 'Sin candidatas del catálogo.' }
-
-  const score = topPiece.score
-  const rejectScore = topReject?.score ?? 0
-  const marginPieces = score - (secondPiece?.score ?? 0)
-  const marginReject = score - rejectScore
-
-  if (rejectScore >= score) {
-    return {
-      kind: 'unknown' as const,
-      score,
-      reason: 'La escena parece un objeto moderno, libro o pantalla, no una pieza del catálogo.',
-    }
-  }
-  // Con catálogo amplio el softmax se diluye: priorizar márgenes relativos.
-  if (marginReject < 0.02) {
-    return {
-      kind: 'unknown' as const,
-      score,
-      reason: 'No se distingue con claridad de una escena ajena al patrimonio.',
-    }
-  }
-  if (score < 0.04) {
-    return { kind: 'unknown' as const, score, reason: 'Confianza demasiado baja para proponer una ficha.' }
-  }
-  if (marginPieces < 0.012 && marginReject < 0.05) {
-    return {
-      kind: 'unknown' as const,
-      score,
-      reason: 'Varias fichas del catálogo quedan empatadas; no se afirma una identidad.',
-    }
-  }
-
-  const piece = pieceForClipLabel(topPiece.label)
-  if (!piece) return { kind: 'unknown' as const, score, reason: 'Etiqueta sin ficha local.' }
-
-  const confirm = marginPieces >= 0.04 && marginReject >= 0.06
-  return {
-    kind: 'match' as const,
-    piece,
-    score,
-    estado: confirm ? ('confirmada_por_paquete' as const) : ('identificacion_probable' as const),
-    alts: pieces.slice(1, 4),
-  }
 }
 
 export class ClipLocalVisionModel implements LocalVisionModel {
@@ -138,38 +71,32 @@ export class ClipLocalVisionModel implements LocalVisionModel {
     _context?: AnalyzeContext,
   ): Promise<VisionResult> {
     await this.loadModel()
-    const labels = allClipLabels()
     const input = await toModelInput(image)
-    const ranked = await this.classifier!(input, labels, {
+
+    const familyRanked = await this.classifier!(input, familyAndRejectLabels(), {
       hypothesis_template: 'a photo of {}',
     })
-    const decision = decide(ranked)
-
-    if (decision.kind === 'unknown') {
-      return unknownResult(decision.score, decision.reason)
+    const familyDecision = decideFamily(familyRanked)
+    if (familyDecision.kind !== 'family') {
+      return unknownResult(familyDecision.score, familyDecision.reason)
     }
 
-    const { piece, score, estado, alts } = decision
-    return {
-      tipo_objeto: piece.tipo_objeto as ObjectType,
-      identificacion: { nombre: piece.nombre, confianza: score, estado },
-      cultura: piece.cultura,
-      periodo: piece.periodo,
-      elementos: piece.elementos,
-      instrumentos: [],
-      alternativas: alts.map((r) => ({
-        nombre: pieceForClipLabel(r.label)?.nombre ?? r.label,
-        confianza: r.score,
-      })),
-      advertencias:
-        estado === 'identificacion_probable'
-          ? ['Identificación probable. Revisa la ficha antes de aceptarla como certeza.']
-          : [],
-      descripcion_visible: `${piece.tipo_objeto} · ${piece.cultura}`,
-      indoor_cues: { sala: piece.sala, inventario: piece.inventario },
-      embedding: [score],
-      simulation: false,
+    const members = piecesInFamily(familyDecision.family)
+    if (members.length === 0) {
+      return familyResult(familyDecision.family, familyDecision.score)
     }
+
+    const pieceRanked = await this.classifier!(
+      input,
+      members.map((p) => p.clip_label),
+      { hypothesis_template: 'a photo of {}' },
+    )
+    const pieceDecision = decidePiece(pieceRanked, familyDecision.family)
+    if (pieceDecision.kind !== 'piece') {
+      return familyResult(familyDecision.family, familyDecision.score, pieceDecision.reason)
+    }
+
+    return pieceResult(pieceDecision.piece, pieceDecision.score, pieceDecision.alts)
   }
 
   async releaseResources() {

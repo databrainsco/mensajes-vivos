@@ -3,6 +3,15 @@ import { classifyGeofence } from '../src/geo/geofence'
 import { MNA_VENUE, PIECES } from '../src/demo/packageData'
 import { cosineSimilarity, mergeWithCard, retrieveCandidates } from '../src/packages/catalog'
 import { DemoLocalVisionModel } from '../src/vision/DemoLocalVisionModel'
+import {
+  decideFamily,
+  decidePiece,
+  familyOf,
+  FAMILY_META,
+  stabilizeScan,
+  unknownResult,
+  type Rank,
+} from '../src/vision/recognition'
 import { deletePackage, getPackage, savePackage } from '../src/packages/db'
 import { createVenueMaps } from '../src/packages/catalog'
 import type { InstalledPackage } from '../src/types'
@@ -65,6 +74,61 @@ describe('audio e incertidumbre', () => {
     expect(ids.size).toBe(PIECES.length)
     const labels = new Set(PIECES.map((p) => p.clip_label))
     expect(labels.size).toBe(PIECES.length)
+    expect(PIECES.every((p) => familyOf(p) in FAMILY_META)).toBe(true)
+  })
+})
+
+describe('reconocimiento estable', () => {
+  const familyClip = FAMILY_META.stone_statue.clip
+  const reject = 'an unrelated everyday modern object'
+
+  it('no nombra ficha si gana una escena moderna', () => {
+    const ranked: Rank[] = [
+      { label: reject, score: 0.4 },
+      { label: familyClip, score: 0.22 },
+    ]
+    const decision = decideFamily(ranked)
+    expect(decision.kind).toBe('unknown')
+  })
+
+  it('reconoce el tipo sin forzar una pieza famosa si no hay margen', () => {
+    const coatlicue = byId('coatlicue')
+    const jaguar = byId('ocelotl-cuauhxicalli')
+    const ranked: Rank[] = [
+      { label: coatlicue.clip_label, score: 0.24 },
+      { label: jaguar.clip_label, score: 0.23 },
+    ]
+    const decision = decidePiece(ranked, 'stone_statue')
+    expect(decision.kind).toBe('family_only')
+  })
+
+  it('no afirma una ficha con un solo fotograma', () => {
+    const incoming = {
+      ...unknownResult(0.4, ''),
+      tipo_objeto: 'escultura' as const,
+      identificacion: { nombre: 'Coatlicue', confianza: 0.4, estado: 'identificacion_probable' as const },
+    }
+    const first = stabilizeScan([], incoming, null)
+    expect(first.displayed.identificacion.nombre).toBeNull()
+    const second = stabilizeScan(first.historyKeys, incoming, first.displayed)
+    expect(second.displayed.identificacion.nombre).toBe('Coatlicue')
+  })
+
+  it('no salta de una ficha a otra con un fotograma aislado', () => {
+    const coatlicue = {
+      ...unknownResult(0.4, ''),
+      tipo_objeto: 'escultura' as const,
+      identificacion: { nombre: 'Coatlicue', confianza: 0.4, estado: 'identificacion_probable' as const },
+    }
+    const xolotl = {
+      ...unknownResult(0.4, ''),
+      tipo_objeto: 'codice' as const,
+      identificacion: { nombre: 'Xólotl en el Códice Fejérváry-Mayer', confianza: 0.35, estado: 'identificacion_probable' as const },
+    }
+    const a = stabilizeScan([], coatlicue, null)
+    const b = stabilizeScan(a.historyKeys, coatlicue, a.displayed)
+    const c = stabilizeScan(b.historyKeys, xolotl, b.displayed)
+    expect(c.displayed.identificacion.nombre).toBe('Coatlicue')
   })
 })
 

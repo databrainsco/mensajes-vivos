@@ -13,7 +13,7 @@ export function pieceClipLabels() {
 }
 
 export function allClipLabels() {
-  return [...pieceClipLabels(), ...REJECT_LABELS]
+  return pieceClipLabels()
 }
 
 export function pieceForClipLabel(label: string) {

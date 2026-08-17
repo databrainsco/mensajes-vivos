@@ -6,7 +6,21 @@ import { MNA_VENUE } from '../demo/packageData'
 import { classifyGeofence } from '../geo/geofence'
 import { getInstalledModel } from '../vision/modelDownload'
 import { downscaleCanvas, estimateBrightness, VisionClient } from '../vision/client'
-import type { VisionResult } from '../types'
+import { resultKey, stabilizeScan } from '../vision/recognition'
+import type { ObjectType, VisionResult } from '../types'
+
+const TYPE_TITLE: Partial<Record<ObjectType, string>> = {
+  escultura: 'Escultura de piedra',
+  relieve: 'Relieve o estela',
+  codice: 'Códice pictográfico',
+  glifo: 'Glifo',
+  deidad: 'Deidad (pictografía)',
+  vasija: 'Cerámica',
+  instrumento: 'Instrumento musical',
+  arquitectura: 'Arquitectura',
+  mascara: 'Máscara',
+  figurilla: 'Figurilla',
+}
 
 export function CameraScreen() {
   const nav = useNavigate()
@@ -16,6 +30,9 @@ export function CameraScreen() {
   const client = useRef(new VisionClient())
   const busy = useRef(false)
   const readyRef = useRef(false)
+  const usingClipRef = useRef(false)
+  const historyRef = useRef<string[]>([])
+  const displayedRef = useRef<VisionResult | null>(null)
   const [status, setStatus] = useState('Iniciando cámara…')
   const [torch, setTorch] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -62,6 +79,7 @@ export function CameraScreen() {
         const loaded = await client.current.load(wantClip)
         if (cancelled) return
         setUsingClip(loaded.clip)
+        usingClipRef.current = loaded.clip
         readyRef.current = true
 
         if (wantClip && loaded.clip) {
@@ -95,6 +113,8 @@ export function CameraScreen() {
     return () => {
       cancelled = true
       readyRef.current = false
+      historyRef.current = []
+      displayedRef.current = null
       stream?.getTracks().forEach((t) => t.stop())
       void client.current.release()
     }
@@ -103,7 +123,7 @@ export function CameraScreen() {
   useEffect(() => {
     const id = window.setInterval(() => {
       void tick()
-    }, 1600)
+    }, 2000)
     return () => window.clearInterval(id)
   }, [])
 
@@ -111,7 +131,7 @@ export function CameraScreen() {
     const v = video.current
     if (!v || !v.videoWidth || busy.current || camError || !readyRef.current) return
 
-    const small = downscaleCanvas(v, 256)
+    const small = downscaleCanvas(v, 384)
     if (estimateBrightness(small) < 0.05) {
       setStatus('Busca más luz')
       return
@@ -122,7 +142,7 @@ export function CameraScreen() {
 
     busy.current = true
     setScanning(true)
-    setStatus(usingClip ? 'Reconociendo con CLIP…' : 'Reconociendo…')
+    setStatus(usingClipRef.current ? 'Reconociendo con CLIP…' : 'Reconociendo…')
     try {
       const vision = await client.current.analyze({
         image,
@@ -130,20 +150,29 @@ export function CameraScreen() {
         width: small.width,
         height: small.height,
       })
-      session.setVision(vision)
-      session.setCapture(small.toDataURL('image/jpeg', 0.7))
-      setLive(vision)
-      if (vision.identificacion.nombre) {
+      const next = stabilizeScan(historyRef.current, vision, displayedRef.current)
+      historyRef.current = next.historyKeys
+      const holdingName =
+        Boolean(displayedRef.current?.identificacion.nombre) &&
+        displayedRef.current?.identificacion.nombre === next.displayed.identificacion.nombre &&
+        resultKey(vision) !== resultKey(next.displayed)
+      displayedRef.current = next.displayed
+      session.setVision(next.displayed)
+      if (!holdingName) session.setCapture(small.toDataURL('image/jpeg', 0.7))
+      setLive(next.displayed)
+      if (next.displayed.identificacion.nombre) {
         setStatus(
-          vision.identificacion.estado === 'confirmada_por_paquete'
-            ? `Coincide: ${vision.identificacion.nombre}`
-            : `Posible: ${vision.identificacion.nombre}`,
+          next.displayed.identificacion.estado === 'confirmada_por_paquete'
+            ? `Coincide: ${next.displayed.identificacion.nombre}`
+            : `Posible: ${next.displayed.identificacion.nombre}`,
         )
-        if (session.privacy.vibrateOnMatch && vision.identificacion.estado === 'confirmada_por_paquete') {
+        if (session.privacy.vibrateOnMatch && next.displayed.identificacion.estado === 'confirmada_por_paquete') {
           navigator.vibrate?.(30)
         }
+      } else if (next.displayed.tipo_objeto !== 'objeto_desconocido') {
+        setStatus('Tipo probable · se espera otra toma igual para la ficha')
       } else {
-        setStatus('Sin identificación · no se inventa una pieza')
+        setStatus('Sin ficha · no se inventa una pieza')
       }
     } catch (error) {
       setStatus(`Error al analizar: ${String(error).slice(0, 60)}`)
@@ -162,26 +191,32 @@ export function CameraScreen() {
     }
   }
 
-  const label = live?.identificacion.nombre
+  const named = live?.identificacion.nombre ?? null
+  const typeOnly = Boolean(live && !named && live.tipo_objeto !== 'objeto_desconocido')
+  const label = named ?? (typeOnly ? (TYPE_TITLE[live!.tipo_objeto] ?? 'Objeto patrimonial') : null)
   const hint =
     live?.identificacion.estado === 'confirmada_por_paquete'
-      ? 'Coincidencia alta con ficha local · toca para abrir'
+      ? 'Coincidencia estable con ficha local · toca para abrir'
       : live?.identificacion.estado === 'identificacion_probable'
-        ? 'Solo probable · verifica antes de aceptar'
-        : live
-          ? live.descripcion_visible
-          : modelReady
-            ? 'Culturas de México · acerca la pieza'
-            : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
+        ? 'Probable · verifica la ficha antes de aceptarla'
+        : typeOnly
+          ? live?.descripcion_visible ?? 'Se ve el tipo, no la pieza. Mantén el encuadre.'
+          : live
+            ? live.descripcion_visible
+            : modelReady
+              ? 'Culturas de México · acerca y espera dos lecturas iguales'
+              : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =
     scanning
       ? 'Escaneando'
-      : live?.identificacion.nombre
-        ? live.identificacion.estado === 'confirmada_por_paquete'
+      : named
+        ? live?.identificacion.estado === 'confirmada_por_paquete'
           ? 'Confirmado'
           : 'Probable'
-        : 'Sin identificación'
+        : typeOnly
+          ? 'Tipo probable'
+          : 'Sin identificación'
 
   return (
     <div className="camera-root">
@@ -231,7 +266,7 @@ export function CameraScreen() {
             {label ?? (modelReady ? 'Pieza no identificada' : 'Descarga el modelo CLIP')}
           </strong>
           <span className="tiny">{hint}</span>
-          {live?.identificacion.confianza ? (
+          {named && live?.identificacion.confianza ? (
             <span className="tiny">{Math.round(live.identificacion.confianza * 100)}% de confianza</span>
           ) : null}
         </button>
