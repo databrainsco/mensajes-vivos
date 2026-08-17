@@ -4,7 +4,8 @@ import { useSession } from '../app/session'
 import { PIECES } from '../demo/packageData'
 import { saveDiscovery } from '../packages/db'
 import { cardForVision } from './AnalysisScreen'
-import type { PieceCard, VerificationState } from '../types'
+import { HistoricalMap } from '../maps/HistoricalMap'
+import type { GeoPlace, VerificationState } from '../types'
 
 const STATE_COPY: Record<VerificationState, string> = {
   confirmada_por_paquete: 'Confirmada por ficha local',
@@ -12,8 +13,21 @@ const STATE_COPY: Record<VerificationState, string> = {
   descripcion_visual: 'Solo descripción visual',
 }
 
-function narrationFor(card: PieceCard) {
-  return card.texto_narracion
+function certezaCopy(c: GeoPlace['certeza']) {
+  if (c === 'exacta') return 'Punto documentado'
+  if (c === 'aproximada') return 'Región aproximada'
+  if (c === 'propuestas_multiples') return 'Varias propuestas'
+  return 'No confirmado'
+}
+
+function PlaceBlock({ title, place }: { title: string; place: GeoPlace }) {
+  return (
+    <div className="place-block">
+      <p className="meta">{title} · {certezaCopy(place.certeza)}</p>
+      <p><strong>{place.etiqueta}</strong></p>
+      {place.nota && <p>{place.nota}</p>}
+    </div>
+  )
 }
 
 export function ResultScreen() {
@@ -46,6 +60,12 @@ export function ResultScreen() {
     )
   }
 
+  const places = [
+    { kind: 'resguardo' as const, place: card.lugares.resguardo },
+    { kind: 'hallazgo' as const, place: card.lugares.hallazgo },
+    ...(card.lugares.elaboracion ? [{ kind: 'elaboracion' as const, place: card.lugares.elaboracion }] : []),
+  ]
+
   return (
     <main className="screen stack">
       <p className="kicker">{card.sala}</p>
@@ -56,19 +76,47 @@ export function ResultScreen() {
       )}
 
       <p className="meta">
-        {card.cultura} · {card.periodo} · {card.tipo_objeto}
+        {card.cultura} · {card.periodo} · {card.tipo_objeto.replace('_', ' ')}
         {card.inventario ? ` · Inv. ${card.inventario}` : ''}
       </p>
       <p className="meta">{STATE_COPY[vision.identificacion.estado]} · {Math.round(vision.identificacion.confianza * 100)}%</p>
 
       <section className="card">
-        <h2>Sobre la pieza</h2>
-        <p>{card.resumen}</p>
+        <h2>Historia</h2>
+        <p>{card.historia}</p>
+        <button className="btn primary row" type="button" onClick={() => speak(card.texto_narracion)}>
+          Escuchar relato
+        </button>
+      </section>
+
+      <section className="card">
+        <h2>Lugares</h2>
+        <p className="meta">Línea del hallazgo al resguardo. Toca los puntos para leer la etiqueta.</p>
+        <HistoricalMap
+          compact
+          user={session.coords ? { lng: session.coords.lng, lat: session.coords.lat } : null}
+          places={places}
+        />
+        <PlaceBlock title="Dónde se resguarda" place={card.lugares.resguardo} />
+        <PlaceBlock title="Dónde se encontró" place={card.lugares.hallazgo} />
+        {card.lugares.elaboracion && (
+          <PlaceBlock title="Dónde se elaboró" place={card.lugares.elaboracion} />
+        )}
+        <Link className="btn secondary row" to="/mapa">Abrir mapa amplio</Link>
+      </section>
+
+      <section className="card">
+        <h2>Datos curiosos</h2>
+        <ul>
+          {card.curiosidades.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
       </section>
 
       {card.elementos.length > 0 && (
         <section className="card">
-          <h2>Elementos visibles</h2>
+          <h2>Qué se ve</h2>
           <ul>
             {card.elementos.map((e) => (
               <li key={e.nombre}>{e.nombre}</li>
@@ -77,35 +125,50 @@ export function ResultScreen() {
         </section>
       )}
 
-      <section className="card">
-        <h2>Lugares</h2>
-        <p><strong>Resguardo:</strong> {card.lugares.resguardo.etiqueta}</p>
-        <p><strong>Hallazgo:</strong> {card.lugares.hallazgo.etiqueta}</p>
-        {card.lugares.hallazgo.nota && <p className="meta">{card.lugares.hallazgo.nota}</p>}
-        {card.lugares.elaboracion && (
-          <p><strong>Elaboración:</strong> {card.lugares.elaboracion.etiqueta}</p>
-        )}
-      </section>
-
       {card.simbolos.length > 0 && (
         <section className="card">
-          <h2>Símbolos</h2>
-          {card.simbolos.slice(0, 2).map((s) => (
+          <h2>Símbolos y lectura</h2>
+          {card.simbolos.map((s) => (
             <div key={s.id}>
               <strong>{s.titulo}</strong>
               <p>{s.texto}</p>
             </div>
           ))}
-          <Link to="/simbolos">Ver todos los símbolos</Link>
         </section>
       )}
 
+      <section className="card">
+        <h2>Más información</h2>
+        <p className="meta">Enlaces de museos y acervos. Se abren fuera de la app.</p>
+        <ul className="link-list">
+          {card.enlaces.map((l) => (
+            <li key={l.url}>
+              <a href={l.url} target="_blank" rel="noreferrer">
+                {l.titulo}
+              </a>
+              {l.nota ? <span className="meta"> — {l.nota}</span> : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="card">
+        <h2>Fuentes</h2>
+        <ul className="link-list">
+          {card.fuentes.map((f) => (
+            <li key={f.titulo}>
+              {f.url ? (
+                <a href={f.url} target="_blank" rel="noreferrer">{f.titulo}</a>
+              ) : (
+                <strong>{f.titulo}</strong>
+              )}
+              <span className="meta"> — {f.procedencia}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <div className="stack">
-        <button className="btn primary row" type="button" onClick={() => speak(narrationFor(card))}>
-          Escuchar historia
-        </button>
-        <Link className="btn secondary row" to="/simbolos">Explorar símbolos</Link>
-        <Link className="btn ghost row" to="/mapa">Ver mapa</Link>
         {hasSound && (
           <Link className="btn ghost row" to="/sonido">
             {hasAnimals && hasInstruments
@@ -115,14 +178,6 @@ export function ResultScreen() {
                 : 'Escuchar instrumento'}
           </Link>
         )}
-        <details>
-          <summary>Fuentes</summary>
-          <ul>
-            {card.fuentes.map((f) => (
-              <li key={f.titulo}>{f.titulo} — {f.procedencia}</li>
-            ))}
-          </ul>
-        </details>
         <button
           className="btn ghost row"
           type="button"

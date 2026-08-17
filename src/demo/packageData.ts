@@ -1,4 +1,5 @@
 import type { PackageManifest, PieceCard, Room, Venue, ObjectType, VisualElement } from '../types'
+import { enrichPiece, type PieceDraft } from './enrichFicha'
 
 export const MNA_VENUE: Venue = {
   id: 'mna',
@@ -59,7 +60,7 @@ function piece(input: {
   lamina_secuencia?: string[]
   seed: number
 }): PieceCard {
-  return {
+  const base: PieceDraft = {
     id: input.id,
     nombre: input.nombre,
     nombre_alternativo: input.nombre_alternativo,
@@ -91,6 +92,7 @@ function piece(input: {
     lamina_secuencia: input.lamina_secuencia,
     embedding: emb(input.seed),
   }
+  return enrichPiece(base)
 }
 
 export const PIECES: PieceCard[] = [

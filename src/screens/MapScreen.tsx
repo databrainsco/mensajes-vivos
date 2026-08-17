@@ -18,13 +18,33 @@ export function MapScreen() {
 
   return (
     <main className="screen stack">
-      <h1>Mapa histórico</h1>
-      <p className="meta">Capas locales GeoJSON. No se consultan teselas externas.</p>
-      <HistoricalMap
-        user={session.coords ? { lng: session.coords.lng, lat: session.coords.lat } : null}
-        places={places}
-      />
-      <Link to="/resultado">Volver al resultado</Link>
+      <p className="kicker">{card?.nombre ?? 'Mapa'}</p>
+      <h1>De dónde viene y dónde está</h1>
+      {card ? (
+        <>
+          <p>
+            El punto rojo es el hallazgo o la región asociada. El punto dorado es el resguardo actual.
+            La línea punteada une ambos cuando hay coordenadas.
+          </p>
+          <HistoricalMap
+            user={session.coords ? { lng: session.coords.lng, lat: session.coords.lat } : null}
+            places={places}
+          />
+          <section className="card">
+            <h2>Resguardo</h2>
+            <p>{card.lugares.resguardo.etiqueta}</p>
+            {card.lugares.resguardo.nota && <p>{card.lugares.resguardo.nota}</p>}
+          </section>
+          <section className="card">
+            <h2>Hallazgo</h2>
+            <p>{card.lugares.hallazgo.etiqueta}</p>
+            {card.lugares.hallazgo.nota && <p>{card.lugares.hallazgo.nota}</p>}
+          </section>
+        </>
+      ) : (
+        <p>Identifica una pieza para ver su mapa de hallazgo y resguardo.</p>
+      )}
+      <Link className="btn ghost row" to="/resultado">Volver a la ficha</Link>
     </main>
   )
 }

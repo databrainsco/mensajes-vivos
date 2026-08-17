@@ -122,6 +122,10 @@ export interface PieceCard {
   fuentes: Array<{ titulo: string; procedencia: string; url?: string }>
   /** Texto hablado: solo sobre la pieza, sin mencionar el modelo. */
   texto_narracion: string
+  /** Relato de sala: origen, hallazgo y resguardo. */
+  historia: string
+  curiosidades: string[]
+  enlaces: Array<{ titulo: string; url: string; nota?: string }>
   narracion?: string
   lamina_secuencia?: string[]
   embedding: number[]
