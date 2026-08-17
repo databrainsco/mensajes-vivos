@@ -1,7 +1,7 @@
 {
   "name": "mensajes-vivos",
   "private": true,
-  "version": "1.6.2",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "generate:audio": "node scripts/generate-wav.mjs",
     "fetch:photos": "node scripts/fetch-museum-photos.mjs",
-    "embed:index": "node scripts/embed-clip-index.mjs"
+    "export:labels": "node scripts/export-piece-labels.mjs",
+    "embed:index": "node scripts/export-piece-labels.mjs && node scripts/embed-clip-index.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",

@@ -403,9 +403,9 @@ export function stabilizeScan(
   const key = resultKey(incoming)
   const history = [...historyKeys, key].slice(-4)
   const instant =
-    incoming.via === 'photo' &&
     Boolean(incoming.identificacion.nombre) &&
-    incoming.identificacion.confianza >= 0.72
+    incoming.identificacion.confianza >= 0.72 &&
+    (incoming.via === 'photo' || incoming.via === 'text')
   const agreed =
     instant || (history.length >= 2 && history[history.length - 1] === history[history.length - 2])
 

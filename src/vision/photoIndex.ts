@@ -29,20 +29,78 @@ export function rankPhotoIndex(query: number[], entries: Array<{ pieceId: string
     .sort((a, b) => b.score - a.score)
 }
 
-export type TextHit = { id: string; kind: string; family?: string; score: number }
+export type TextHit = { id: string; kind: string; family?: string; pieceId?: string; score: number }
 
 export function rankTextIndex(
   query: number[],
-  entries: Array<{ id: string; kind: string; family?: string; embedding: number[] }>,
+  entries: Array<{ id: string; kind: string; family?: string; pieceId?: string; embedding: number[] }>,
 ): TextHit[] {
   return entries
     .map((entry) => ({
       id: entry.id,
       kind: entry.kind,
       family: entry.family,
+      pieceId: entry.pieceId,
       score: cosine(query, entry.embedding),
     }))
     .sort((a, b) => b.score - a.score)
+}
+
+export function mergePhotoRanks(...lists: IndexHit[][]): IndexHit[] {
+  const best = new Map<string, number>()
+  for (const list of lists) {
+    for (const hit of list) {
+      const prev = best.get(hit.pieceId) ?? -1
+      if (hit.score > prev) best.set(hit.pieceId, hit.score)
+    }
+  }
+  return [...best.entries()]
+    .map(([pieceId, score]) => ({ pieceId, score }))
+    .sort((a, b) => b.score - a.score)
+}
+
+export function rankPieceTexts(query: number[], texts: Array<{ pieceId?: string; kind: string; embedding: number[] }>): IndexHit[] {
+  const best = new Map<string, number>()
+  for (const entry of texts) {
+    if (entry.kind !== 'piece' || !entry.pieceId) continue
+    const score = cosine(query, entry.embedding)
+    const prev = best.get(entry.pieceId) ?? -1
+    if (score > prev) best.set(entry.pieceId, score)
+  }
+  return [...best.entries()]
+    .map(([pieceId, score]) => ({ pieceId, score }))
+    .sort((a, b) => b.score - a.score)
+}
+
+/** Desempate imagen–texto entre fichas candidatas (escala distinta a foto–foto). */
+export function decidePieceText(ranked: IndexHit[], candidates?: Set<string>): PhotoDecision {
+  const list = candidates?.size ? ranked.filter((r) => candidates.has(r.pieceId)) : ranked
+  const top = list[0]
+  const second = list[1]
+  if (!top) return { kind: 'none', score: 0, reason: 'Sin textos de ficha.' }
+  const margin = top.score - (second?.score ?? 0)
+  const piece = pieceById(top.pieceId)
+  const secondPiece = second ? pieceById(second.pieceId) : undefined
+  const olmecaVsStatue =
+    top.pieceId === 'cabeza-olmeca' && secondPiece && familyOf(secondPiece) === 'stone_statue' && margin < 0.02
+  if (piece && !olmecaVsStatue && top.score >= 0.24 && margin >= 0.015) {
+    return { kind: 'piece', piece, score: top.score, alts: list.slice(1, 4) }
+  }
+  if (piece && top.score >= 0.2) {
+    return {
+      kind: 'family',
+      family: olmecaVsStatue || margin < 0.015 ? familyWhenTied(top.pieceId, second?.pieceId) : familyOf(piece),
+      score: top.score,
+    }
+  }
+  return { kind: 'none', score: top.score, reason: 'El texto no desempata una ficha.' }
+}
+
+export function photoIsClear(ranked: IndexHit[]): boolean {
+  const top = ranked[0]
+  const second = ranked[1]
+  if (!top) return false
+  return top.score >= 0.78 && top.score - (second?.score ?? 0) >= 0.04
 }
 
 export type TextGate =

@@ -14,7 +14,7 @@ import {
 } from '../src/vision/recognition'
 import { MUSEUM_PHOTOS } from '../src/demo/visualIndex'
 import { CLIP_INDEX } from '../src/demo/clipIndex'
-import { decidePhotoIndex, decideTextGate, l2Normalize, rankPhotoIndex } from '../src/vision/photoIndex'
+import { decidePhotoIndex, decidePieceText, decideTextGate, l2Normalize, mergePhotoRanks, rankPhotoIndex, rankPieceTexts } from '../src/vision/photoIndex'
 import { signaturesClose } from '../src/vision/client'
 import { deletePackage, getPackage, savePackage } from '../src/packages/db'
 import { createVenueMaps } from '../src/packages/catalog'
@@ -222,9 +222,39 @@ describe('índice fotográfico local', () => {
   })
 
   it('trae embeddings precomputados del índice', () => {
-    expect(CLIP_INDEX.photos.length).toBe(MUSEUM_PHOTOS.length)
+    expect(CLIP_INDEX.photos.length).toBeGreaterThanOrEqual(MUSEUM_PHOTOS.length)
     expect(CLIP_INDEX.photos[0].embedding.length).toBe(512)
     expect(CLIP_INDEX.texts.some((t) => t.kind === 'reject')).toBe(true)
+    expect(CLIP_INDEX.texts.filter((t) => t.kind === 'piece').length).toBe(MUSEUM_PHOTOS.length)
+  })
+
+  it('desempata por texto entre fichas candidatas', () => {
+    const coatPhoto = CLIP_INDEX.photos.find((p) => p.pieceId === 'coatlicue' && (p.view === 'full' || !p.view))
+    expect(coatPhoto).toBeTruthy()
+    const ranked = rankPieceTexts(coatPhoto!.embedding, CLIP_INDEX.texts)
+    expect(ranked[0].pieceId).toBe('coatlicue')
+    const hit = decidePieceText(ranked, new Set(['coatlicue', 'cabeza-olmeca', 'huehueteotl']))
+    expect(hit.kind).toBe('piece')
+    if (hit.kind === 'piece') expect(hit.piece.id).toBe('coatlicue')
+
+    const olmPhoto = CLIP_INDEX.photos.find((p) => p.pieceId === 'cabeza-olmeca' && (p.view === 'full' || !p.view))
+    const olmHit = decidePieceText(rankPieceTexts(olmPhoto!.embedding, CLIP_INDEX.texts), new Set(['coatlicue', 'cabeza-olmeca']))
+    expect(olmHit.kind).toBe('piece')
+    if (olmHit.kind === 'piece') expect(olmHit.piece.id).toBe('cabeza-olmeca')
+  })
+
+  it('fusiona dos encuadres quedándose con el mejor score por pieza', () => {
+    const merged = mergePhotoRanks(
+      [
+        { pieceId: 'coatlicue', score: 0.71 },
+        { pieceId: 'cabeza-olmeca', score: 0.74 },
+      ],
+      [
+        { pieceId: 'coatlicue', score: 0.8 },
+        { pieceId: 'cabeza-olmeca', score: 0.7 },
+      ],
+    )
+    expect(merged[0]).toEqual({ pieceId: 'coatlicue', score: 0.8 })
   })
 
   it('rechaza escenas modernas en el espacio de texto', () => {
