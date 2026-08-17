@@ -1,4 +1,5 @@
 import { PIECES } from '../demo/packageData'
+import { familyOf, type ClipFamily } from './recognition'
 
 export function l2Normalize(values: number[]) {
   let n = 0
@@ -66,20 +67,40 @@ export function decideTextGate(ranked: TextHit[]): TextGate {
 
 export type PhotoDecision =
   | { kind: 'none'; score: number; reason: string }
+  | { kind: 'family'; family: ClipFamily; score: number }
   | { kind: 'piece'; piece: (typeof PIECES)[number]; score: number; alts: IndexHit[] }
+
+function pieceById(id: string) {
+  return PIECES.find((p) => p.id === id)
+}
+
+/** Si Coatlicue y la cabeza olmeca empatan, no se afirma la cabeza. */
+function familyWhenTied(topId: string, secondId: string | undefined): ClipFamily {
+  const top = pieceById(topId)
+  const second = secondId ? pieceById(secondId) : undefined
+  const a = top ? familyOf(top) : 'stone_statue'
+  const b = second ? familyOf(second) : a
+  if (a === b) return a
+  if (a === 'colossal_head' || b === 'colossal_head') return 'stone_statue'
+  return 'stone_statue'
+}
 
 export function decidePhotoIndex(ranked: IndexHit[]): PhotoDecision {
   const top = ranked[0]
   const second = ranked[1]
   if (!top) return { kind: 'none', score: 0, reason: 'Índice vacío.' }
   const margin = top.score - (second?.score ?? 0)
-  if (top.score < 0.7) {
-    return { kind: 'none', score: top.score, reason: 'Ninguna foto de referencia supera el umbral.' }
+  const piece = pieceById(top.pieceId)
+  const minMargin = top.score >= 0.88 ? 0.025 : 0.04
+  if (piece && top.score >= 0.74 && margin >= minMargin) {
+    return { kind: 'piece', piece, score: top.score, alts: ranked.slice(1, 4) }
   }
-  if (margin < 0.028 && top.score < 0.82) {
-    return { kind: 'none', score: top.score, reason: 'Varias fotos de museo quedan empatadas.' }
+  if (piece && top.score >= 0.5) {
+    return {
+      kind: 'family',
+      family: margin < 0.04 ? familyWhenTied(top.pieceId, second?.pieceId) : familyOf(piece),
+      score: top.score,
+    }
   }
-  const piece = PIECES.find((p) => p.id === top.pieceId)
-  if (!piece) return { kind: 'none', score: top.score, reason: 'Foto sin ficha.' }
-  return { kind: 'piece', piece, score: top.score, alts: ranked.slice(1, 4) }
+  return { kind: 'none', score: top.score, reason: 'Ninguna foto de referencia supera el umbral.' }
 }

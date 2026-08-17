@@ -12,28 +12,23 @@ export function downscaleCanvas(source: HTMLCanvasElement | HTMLVideoElement, ma
   return canvas
 }
 
-/** Recorte central del visor, como el recuadro de Google Lens. Reutiliza el canvas. */
-export function drawViewfinder(
-  canvas: HTMLCanvasElement,
-  video: HTMLVideoElement,
-  max = 256,
-  ratio = 0.62,
-): HTMLCanvasElement {
+/** Encaja el fotograma completo (Coatlicue es alta; un recorte de cara se confunde con cabeza olmeca). */
+export function drawViewfinder(canvas: HTMLCanvasElement, video: HTMLVideoElement, max = 256): HTMLCanvasElement {
   const vw = video.videoWidth
   const vh = video.videoHeight
-  const side = Math.min(vw, vh) * ratio
-  const sx = (vw - side) / 2
-  const sy = (vh - side) / 2
-  if (canvas.width !== max || canvas.height !== max) {
-    canvas.width = max
-    canvas.height = max
+  const scale = Math.min(1, max / Math.max(vw, vh || 1))
+  const w = Math.max(1, Math.round(vw * scale))
+  const h = Math.max(1, Math.round(vh * scale))
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w
+    canvas.height = h
   }
-  canvas.getContext('2d', { willReadFrequently: true })?.drawImage(video, sx, sy, side, side, 0, 0, max, max)
+  canvas.getContext('2d', { willReadFrequently: true })?.drawImage(video, 0, 0, w, h)
   return canvas
 }
 
-export function viewfinderCanvas(video: HTMLVideoElement, max = 256, ratio = 0.62): HTMLCanvasElement {
-  return drawViewfinder(document.createElement('canvas'), video, max, ratio)
+export function viewfinderCanvas(video: HTMLVideoElement, max = 256): HTMLCanvasElement {
+  return drawViewfinder(document.createElement('canvas'), video, max)
 }
 
 export function estimateBrightness(canvas: HTMLCanvasElement): number {

@@ -40,7 +40,7 @@ export const FAMILY_META: Record<
     clip: 'an Olmec colossal basalt head with helmet-like headdress',
     tipo: 'escultura',
     titulo: 'Cabeza colosal',
-    texto: 'Parece una cabeza colosal olmeca.',
+    texto: 'Parece una cabeza de piedra monumental. Aún no se afirma cuál pieza es.',
     specific: true,
   },
   relief: {

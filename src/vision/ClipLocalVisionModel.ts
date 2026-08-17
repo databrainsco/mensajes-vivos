@@ -3,7 +3,6 @@ import { VISION_MODEL } from './modelCatalog'
 import { CLIP_INDEX } from '../demo/clipIndex'
 import { decidePhotoIndex, l2Normalize, rankPhotoIndex, rankTextIndex, decideTextGate } from './photoIndex'
 import { familyResult, pieceResult, unknownResult } from './recognition'
-import type { ClipFamily } from './recognition'
 
 type TensorLike = { data: ArrayLike<number>; dims: number[] }
 type VisionModel = {
@@ -101,9 +100,8 @@ export class ClipLocalVisionModel implements LocalVisionModel {
         'photo',
       )
     }
-
-    if (gate.family) {
-      return familyResult(gate.family as ClipFamily, gate.familyScore)
+    if (photo.kind === 'family') {
+      return familyResult(photo.family, photo.score)
     }
     return unknownResult(photo.score, photo.reason)
   }

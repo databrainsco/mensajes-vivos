@@ -220,7 +220,7 @@ export function CameraScreen() {
           : live
             ? live.descripcion_visible
             : modelReady
-              ? 'Apunta al recuadro · índice local'
+              ? 'Encuadra la pieza completa · índice local'
               : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =

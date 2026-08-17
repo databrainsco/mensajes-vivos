@@ -190,7 +190,28 @@ describe('índice fotográfico local', () => {
       { pieceId: 'coatlicue', score: 0.73 },
       { pieceId: 'xochipilli', score: 0.72 },
     ])
-    expect(tied.kind).toBe('none')
+    expect(tied.kind).not.toBe('piece')
+
+    const olmecaVsCoatlicue = decidePhotoIndex([
+      { pieceId: 'cabeza-olmeca', score: 0.8 },
+      { pieceId: 'coatlicue', score: 0.79 },
+    ])
+    expect(olmecaVsCoatlicue.kind).toBe('family')
+    if (olmecaVsCoatlicue.kind === 'family') expect(olmecaVsCoatlicue.family).toBe('stone_statue')
+  })
+
+  it('no nombra cabeza olmeca si la toma también parece Coatlicue', () => {
+    const coat = CLIP_INDEX.photos.find((p) => p.pieceId === 'coatlicue')
+    const olm = CLIP_INDEX.photos.find((p) => p.pieceId === 'cabeza-olmeca')
+    expect(coat && olm).toBeTruthy()
+    const query = l2Normalize(coat!.embedding.map((x, i) => x * 0.45 + olm!.embedding[i] * 0.55))
+    const ranked = rankPhotoIndex(query, CLIP_INDEX.photos)
+    const hit = decidePhotoIndex(ranked)
+    expect(hit.kind).not.toBe('piece')
+    if (hit.kind === 'family') expect(hit.family).not.toBe('colossal_head')
+    const self = decidePhotoIndex(rankPhotoIndex(coat!.embedding, CLIP_INDEX.photos))
+    expect(self.kind).toBe('piece')
+    if (self.kind === 'piece') expect(self.piece.id).toBe('coatlicue')
   })
 
   it('trae embeddings precomputados del índice', () => {
