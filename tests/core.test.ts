@@ -13,7 +13,9 @@ import {
   type Rank,
 } from '../src/vision/recognition'
 import { MUSEUM_PHOTOS } from '../src/demo/visualIndex'
-import { decidePhotoIndex, l2Normalize, rankPhotoIndex } from '../src/vision/photoIndex'
+import { CLIP_INDEX } from '../src/demo/clipIndex'
+import { decidePhotoIndex, decideTextGate, l2Normalize, rankPhotoIndex } from '../src/vision/photoIndex'
+import { signaturesClose } from '../src/vision/client'
 import { deletePackage, getPackage, savePackage } from '../src/packages/db'
 import { createVenueMaps } from '../src/packages/catalog'
 import type { InstalledPackage } from '../src/types'
@@ -138,6 +140,17 @@ describe('reconocimiento estable', () => {
     const c = stabilizeScan(b.historyKeys, xolotl, b.displayed)
     expect(c.displayed.identificacion.nombre).toBe('Coatlicue')
   })
+
+  it('nombra de inmediato si la foto de referencia es muy clara', () => {
+    const incoming = {
+      ...unknownResult(0.86, ''),
+      tipo_objeto: 'escultura' as const,
+      via: 'photo' as const,
+      identificacion: { nombre: 'Coatlicue', confianza: 0.86, estado: 'identificacion_probable' as const },
+    }
+    const first = stabilizeScan([], incoming, null)
+    expect(first.displayed.identificacion.nombre).toBe('Coatlicue')
+  })
 })
 
 describe('adaptador demo', () => {
@@ -178,6 +191,25 @@ describe('índice fotográfico local', () => {
       { pieceId: 'xochipilli', score: 0.72 },
     ])
     expect(tied.kind).toBe('none')
+  })
+
+  it('trae embeddings precomputados del índice', () => {
+    expect(CLIP_INDEX.photos.length).toBe(MUSEUM_PHOTOS.length)
+    expect(CLIP_INDEX.photos[0].embedding.length).toBe(512)
+    expect(CLIP_INDEX.texts.some((t) => t.kind === 'reject')).toBe(true)
+  })
+
+  it('rechaza escenas modernas en el espacio de texto', () => {
+    const gate = decideTextGate([
+      { id: 'reject:book', kind: 'reject', score: 0.31 },
+      { id: 'artifact', kind: 'artifact', score: 0.22 },
+    ])
+    expect(gate.kind).toBe('reject')
+  })
+
+  it('omite fotogramas casi iguales', () => {
+    expect(signaturesClose([10, 12, 11], [11, 10, 12])).toBe(true)
+    expect(signaturesClose([10, 12, 11], [80, 10, 12])).toBe(false)
   })
 })
 

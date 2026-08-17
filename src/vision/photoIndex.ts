@@ -28,18 +28,58 @@ export function rankPhotoIndex(query: number[], entries: Array<{ pieceId: string
     .sort((a, b) => b.score - a.score)
 }
 
-export function decidePhotoIndex(ranked: IndexHit[]) {
+export type TextHit = { id: string; kind: string; family?: string; score: number }
+
+export function rankTextIndex(
+  query: number[],
+  entries: Array<{ id: string; kind: string; family?: string; embedding: number[] }>,
+): TextHit[] {
+  return entries
+    .map((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      family: entry.family,
+      score: cosine(query, entry.embedding),
+    }))
+    .sort((a, b) => b.score - a.score)
+}
+
+export type TextGate =
+  | { kind: 'reject'; score: number }
+  | { kind: 'keep'; score: number; family?: string; familyScore: number }
+
+export function decideTextGate(ranked: TextHit[]): TextGate {
+  const reject = ranked.find((r) => r.kind === 'reject')
+  const keep = ranked.find((r) => r.kind !== 'reject')
+  if (!keep) return { kind: 'reject', score: reject?.score ?? 0 }
+  if (reject && reject.score >= keep.score) {
+    return { kind: 'reject', score: reject.score }
+  }
+  const family = ranked.find((r) => r.kind === 'family')
+  return {
+    kind: 'keep',
+    score: keep.score,
+    family: family?.family,
+    familyScore: family?.score ?? keep.score,
+  }
+}
+
+export type PhotoDecision =
+  | { kind: 'none'; score: number; reason: string }
+  | { kind: 'piece'; piece: (typeof PIECES)[number]; score: number; alts: IndexHit[] }
+
+export function decidePhotoIndex(ranked: IndexHit[]): PhotoDecision {
   const top = ranked[0]
   const second = ranked[1]
-  if (!top) return { kind: 'none' as const, score: 0, reason: 'Índice vacío.' }
+  if (!top) return { kind: 'none', score: 0, reason: 'Índice vacío.' }
   const margin = top.score - (second?.score ?? 0)
   if (top.score < 0.7) {
-    return { kind: 'none' as const, score: top.score, reason: 'Ninguna foto de referencia supera el umbral.' }
+    return { kind: 'none', score: top.score, reason: 'Ninguna foto de referencia supera el umbral.' }
   }
   if (margin < 0.028 && top.score < 0.82) {
-    return { kind: 'none' as const, score: top.score, reason: 'Varias fotos de museo quedan empatadas.' }
+    return { kind: 'none', score: top.score, reason: 'Varias fotos de museo quedan empatadas.' }
   }
   const piece = PIECES.find((p) => p.id === top.pieceId)
-  if (!piece) return { kind: 'none' as const, score: top.score, reason: 'Foto sin ficha.' }
-  return { kind: 'piece' as const, piece, score: top.score, alts: ranked.slice(1, 4) }
+  if (!piece) return { kind: 'none', score: top.score, reason: 'Foto sin ficha.' }
+  return { kind: 'piece', piece, score: top.score, alts: ranked.slice(1, 4) }
 }

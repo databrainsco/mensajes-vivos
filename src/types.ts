@@ -63,6 +63,7 @@ export interface VisionResult {
   }
   embedding: number[]
   simulation: boolean
+  via?: 'photo' | 'text'
 }
 
 export interface DeviceCapabilities {

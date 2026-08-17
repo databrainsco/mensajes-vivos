@@ -336,6 +336,7 @@ export function familyResult(family: ClipFamily, score: number, reason?: string)
     descripcion_visible: meta.texto,
     embedding: [score],
     simulation: false,
+    via: 'text',
   }
 }
 
@@ -368,6 +369,7 @@ export function pieceResult(
     indoor_cues: { sala: piece.sala, inventario: piece.inventario },
     embedding: [score],
     simulation: false,
+    via: source,
   }
 }
 
@@ -400,7 +402,12 @@ export function stabilizeScan(
 ): { historyKeys: string[]; displayed: VisionResult } {
   const key = resultKey(incoming)
   const history = [...historyKeys, key].slice(-4)
-  const agreed = history.length >= 2 && history[history.length - 1] === history[history.length - 2]
+  const instant =
+    incoming.via === 'photo' &&
+    Boolean(incoming.identificacion.nombre) &&
+    incoming.identificacion.confianza >= 0.78
+  const agreed =
+    instant || (history.length >= 2 && history[history.length - 1] === history[history.length - 2])
 
   if (agreed) {
     const triple = history.length >= 3 && history.slice(-3).every((k) => k === key)

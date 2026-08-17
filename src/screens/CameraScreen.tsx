@@ -5,7 +5,7 @@ import { getPrivacy, setPrivacy } from '../packages/db'
 import { MNA_VENUE } from '../demo/packageData'
 import { classifyGeofence } from '../geo/geofence'
 import { getInstalledModel } from '../vision/modelDownload'
-import { downscaleCanvas, estimateBrightness, VisionClient } from '../vision/client'
+import { drawViewfinder, estimateBrightness, frameSignature, signaturesClose, VisionClient } from '../vision/client'
 import { resultKey, stabilizeScan } from '../vision/recognition'
 import type { ObjectType, VisionResult } from '../types'
 
@@ -33,6 +33,8 @@ export function CameraScreen() {
   const usingClipRef = useRef(false)
   const historyRef = useRef<string[]>([])
   const displayedRef = useRef<VisionResult | null>(null)
+  const lastSigRef = useRef<number[]>([])
+  const cropRef = useRef<HTMLCanvasElement | null>(null)
   const [status, setStatus] = useState('Iniciando cámara…')
   const [torch, setTorch] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -121,28 +123,42 @@ export function CameraScreen() {
   }, [])
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      void tick()
-    }, 2000)
-    return () => window.clearInterval(id)
+    let stop = false
+    let timer = 0
+    const loop = () => {
+      if (stop) return
+      void tick().finally(() => {
+        if (stop) return
+        timer = window.setTimeout(loop, 80)
+      })
+    }
+    timer = window.setTimeout(loop, 280)
+    return () => {
+      stop = true
+      window.clearTimeout(timer)
+    }
   }, [])
 
   async function tick() {
     const v = video.current
     if (!v || !v.videoWidth || busy.current || camError || !readyRef.current) return
 
-    const small = downscaleCanvas(v, 384)
+    if (!cropRef.current) cropRef.current = document.createElement('canvas')
+    const small = drawViewfinder(cropRef.current, v, 256)
     if (estimateBrightness(small) < 0.05) {
       setStatus('Busca más luz')
       return
     }
+    const sig = frameSignature(small)
+    if (signaturesClose(sig, lastSigRef.current) && displayedRef.current) return
+    lastSigRef.current = sig
     const ctx = small.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
     const image = ctx.getImageData(0, 0, small.width, small.height)
 
     busy.current = true
     setScanning(true)
-    setStatus(usingClipRef.current ? 'Reconociendo con CLIP…' : 'Reconociendo…')
+        setStatus(usingClipRef.current ? 'Comparando con índice local…' : 'Reconociendo…')
     try {
       const vision = await client.current.analyze({
         image,
@@ -204,7 +220,7 @@ export function CameraScreen() {
           : live
             ? live.descripcion_visible
             : modelReady
-              ? 'Índice de museo local · acerca la pieza'
+              ? 'Apunta al recuadro · índice local'
               : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =
