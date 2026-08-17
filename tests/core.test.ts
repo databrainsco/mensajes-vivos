@@ -55,6 +55,8 @@ describe('audio e incertidumbre', () => {
   it('incluye un catálogo amplio de Mesoamérica', () => {
     expect(PIECES.length).toBeGreaterThanOrEqual(60)
     expect(PIECES.some((p) => p.cultura.includes('Maya'))).toBe(true)
+    expect(PIECES.every((p) => !/Guatemala|Belice|Honduras|El Salvador|Centroam/i.test(p.cultura))).toBe(true)
+    expect(PIECES.every((p) => !/^Mesoam/i.test(p.cultura))).toBe(true)
     expect(PIECES.some((p) => p.cultura.includes('Olmeca'))).toBe(true)
     expect(PIECES.some((p) => p.tipo_objeto === 'deidad')).toBe(true)
     expect(PIECES.some((p) => p.tipo_objeto === 'glifo')).toBe(true)

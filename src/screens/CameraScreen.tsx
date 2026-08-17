@@ -171,7 +171,7 @@ export function CameraScreen() {
         : live
           ? live.descripcion_visible
           : modelReady
-            ? 'Dioses · glifos · códices · esculturas'
+            ? 'Culturas de México · acerca la pieza'
             : 'Sin CLIP no se propone identidad. Descárgalo en Guías.'
 
   const kicker =

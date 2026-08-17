@@ -34,7 +34,7 @@ function unknownResult(score: number, reason: string): VisionResult {
     alternativas: [],
     advertencias: [reason],
     descripcion_visible:
-      'No hay una coincidencia clara con el catálogo mesoamericano local. Acerca una escultura, relieve, códice, vasija o instrumento del acervo.',
+      'No hay una coincidencia clara con el catálogo de culturas de México. Acerca una escultura, relieve, códice, glifo, vasija o instrumento del acervo.',
     embedding: [score],
     simulation: false,
   }
