@@ -5,7 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 const sha = (process.env.VITE_GIT_SHA ?? process.env.GITHUB_SHA ?? '').slice(0, 7)
-const appVersion = sha ? `v${pkg.version} · ${sha}` : `v${pkg.version}`
+const builtAt = new Date().toISOString().slice(0, 16).replace('T', ' ')
+const appVersion = sha ? `v${pkg.version} · ${sha}` : `v${pkg.version} · ${builtAt}`
 
 const base = process.env.VITE_BASE ?? '/mensajes-vivos/'
 
@@ -16,9 +17,19 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    {
+      name: 'html-app-version',
+      transformIndexHtml(html) {
+        return html.replace(
+          '<title>Mensajes Vivos</title>',
+          `<meta name="app-version" content="${appVersion}" />\n    <title>Mensajes Vivos</title>`,
+        )
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.svg', 'packages/**/*'],
+      injectRegister: false,
+      includeAssets: ['favicon.svg', 'icons/*.svg'],
       manifest: {
         name: 'Mensajes Vivos',
         short_name: 'Mensajes Vivos',
@@ -39,9 +50,28 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,webmanifest}'],
-        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        globPatterns: ['**/*.{js,css,svg,woff2,webmanifest}'],
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-pages',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 },
+            },
+          },
+          {
+            urlPattern: /\/index\.html$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-pages',
+              networkTimeoutSeconds: 3,
+            },
+          },
           {
             urlPattern: /packages\/.*/i,
             handler: 'CacheFirst',
