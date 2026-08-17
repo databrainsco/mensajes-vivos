@@ -192,6 +192,13 @@ describe('índice fotográfico local', () => {
     ])
     expect(tied.kind).not.toBe('piece')
 
+    const coatlicueOk = decidePhotoIndex([
+      { pieceId: 'coatlicue', score: 0.76 },
+      { pieceId: 'huehueteotl', score: 0.72 },
+    ])
+    expect(coatlicueOk.kind).toBe('piece')
+    if (coatlicueOk.kind === 'piece') expect(coatlicueOk.piece.id).toBe('coatlicue')
+
     const olmecaVsCoatlicue = decidePhotoIndex([
       { pieceId: 'cabeza-olmeca', score: 0.8 },
       { pieceId: 'coatlicue', score: 0.79 },

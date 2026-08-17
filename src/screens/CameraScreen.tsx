@@ -150,7 +150,8 @@ export function CameraScreen() {
       return
     }
     const sig = frameSignature(small)
-    if (signaturesClose(sig, lastSigRef.current) && displayedRef.current) return
+    const alreadyNamed = Boolean(displayedRef.current?.identificacion.nombre)
+    if (signaturesClose(sig, lastSigRef.current) && alreadyNamed) return
     lastSigRef.current = sig
     const ctx = small.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
@@ -158,7 +159,7 @@ export function CameraScreen() {
 
     busy.current = true
     setScanning(true)
-        setStatus(usingClipRef.current ? 'Comparando con índice local…' : 'Reconociendo…')
+    setStatus(usingClipRef.current ? 'Comparando con índice local…' : 'Reconociendo…')
     try {
       const vision = await client.current.analyze({
         image,

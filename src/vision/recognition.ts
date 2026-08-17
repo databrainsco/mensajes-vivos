@@ -405,7 +405,7 @@ export function stabilizeScan(
   const instant =
     incoming.via === 'photo' &&
     Boolean(incoming.identificacion.nombre) &&
-    incoming.identificacion.confianza >= 0.78
+    incoming.identificacion.confianza >= 0.72
   const agreed =
     instant || (history.length >= 2 && history[history.length - 1] === history[history.length - 2])
 

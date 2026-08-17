@@ -91,14 +91,16 @@ export function decidePhotoIndex(ranked: IndexHit[]): PhotoDecision {
   if (!top) return { kind: 'none', score: 0, reason: 'Índice vacío.' }
   const margin = top.score - (second?.score ?? 0)
   const piece = pieceById(top.pieceId)
-  const minMargin = top.score >= 0.88 ? 0.025 : 0.04
-  if (piece && top.score >= 0.74 && margin >= minMargin) {
+  const secondPiece = second ? pieceById(second.pieceId) : undefined
+  const olmecaVsStatue =
+    top.pieceId === 'cabeza-olmeca' && secondPiece && familyOf(secondPiece) === 'stone_statue' && margin < 0.055
+  if (piece && !olmecaVsStatue && top.score >= 0.7 && margin >= 0.028) {
     return { kind: 'piece', piece, score: top.score, alts: ranked.slice(1, 4) }
   }
   if (piece && top.score >= 0.5) {
     return {
       kind: 'family',
-      family: margin < 0.04 ? familyWhenTied(top.pieceId, second?.pieceId) : familyOf(piece),
+      family: olmecaVsStatue || margin < 0.028 ? familyWhenTied(top.pieceId, second?.pieceId) : familyOf(piece),
       score: top.score,
     }
   }
