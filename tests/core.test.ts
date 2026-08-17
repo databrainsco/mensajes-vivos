@@ -53,9 +53,16 @@ describe('audio e incertidumbre', () => {
     expect(x.instrumentos).toHaveLength(0)
   })
   it('incluye un catálogo amplio de Mesoamérica', () => {
-    expect(PIECES.length).toBeGreaterThanOrEqual(15)
+    expect(PIECES.length).toBeGreaterThanOrEqual(60)
     expect(PIECES.some((p) => p.cultura.includes('Maya'))).toBe(true)
     expect(PIECES.some((p) => p.cultura.includes('Olmeca'))).toBe(true)
+    expect(PIECES.some((p) => p.tipo_objeto === 'deidad')).toBe(true)
+    expect(PIECES.some((p) => p.tipo_objeto === 'glifo')).toBe(true)
+    expect(PIECES.some((p) => p.tipo_objeto === 'codice')).toBe(true)
+    const ids = new Set(PIECES.map((p) => p.id))
+    expect(ids.size).toBe(PIECES.length)
+    const labels = new Set(PIECES.map((p) => p.clip_label))
+    expect(labels.size).toBe(PIECES.length)
   })
 })
 

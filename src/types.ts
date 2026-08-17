@@ -5,6 +5,10 @@ export type ObjectType =
   | 'vasija'
   | 'instrumento'
   | 'arquitectura'
+  | 'deidad'
+  | 'glifo'
+  | 'mascara'
+  | 'figurilla'
   | 'objeto_desconocido'
 
 export type VerificationState =

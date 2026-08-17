@@ -65,28 +65,29 @@ function decide(ranked: Rank[]) {
       reason: 'La escena parece un objeto moderno, libro o pantalla, no una pieza del catálogo.',
     }
   }
-  if (marginReject < 0.04) {
+  // Con catálogo amplio el softmax se diluye: priorizar márgenes relativos.
+  if (marginReject < 0.02) {
     return {
       kind: 'unknown' as const,
       score,
       reason: 'No se distingue con claridad de una escena ajena al patrimonio.',
     }
   }
-  if (score < 0.12) {
+  if (score < 0.04) {
     return { kind: 'unknown' as const, score, reason: 'Confianza demasiado baja para proponer una ficha.' }
   }
-  if (marginPieces < 0.03 && score < 0.22) {
+  if (marginPieces < 0.012 && marginReject < 0.05) {
     return {
       kind: 'unknown' as const,
       score,
-      reason: 'Varias piezas del catálogo quedan empatadas; no se afirma una identidad.',
+      reason: 'Varias fichas del catálogo quedan empatadas; no se afirma una identidad.',
     }
   }
 
   const piece = pieceForClipLabel(topPiece.label)
   if (!piece) return { kind: 'unknown' as const, score, reason: 'Etiqueta sin ficha local.' }
 
-  const confirm = score >= 0.28 && marginPieces >= 0.06 && marginReject >= 0.08
+  const confirm = marginPieces >= 0.04 && marginReject >= 0.06
   return {
     kind: 'match' as const,
     piece,
@@ -152,8 +153,8 @@ export class ClipLocalVisionModel implements LocalVisionModel {
     return {
       tipo_objeto: piece.tipo_objeto as ObjectType,
       identificacion: { nombre: piece.nombre, confianza: score, estado },
-      cultura: null,
-      periodo: null,
+      cultura: piece.cultura,
+      periodo: piece.periodo,
       elementos: piece.elementos,
       instrumentos: [],
       alternativas: alts.map((r) => ({
