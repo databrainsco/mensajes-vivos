@@ -52,7 +52,7 @@ describe('audio e incertidumbre', () => {
     expect(x.lugares.hallazgo.certeza).toBe('desconocida')
     expect(x.instrumentos).toHaveLength(0)
   })
-  it('incluye un catálogo amplio de Mesoamérica', () => {
+  it('incluye un catálogo amplio de culturas de México', () => {
     expect(PIECES.length).toBeGreaterThanOrEqual(60)
     expect(PIECES.some((p) => p.cultura.includes('Maya'))).toBe(true)
     expect(PIECES.every((p) => !/Guatemala|Belice|Honduras|El Salvador|Centroam/i.test(p.cultura))).toBe(true)
